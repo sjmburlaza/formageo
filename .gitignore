@@ -42,3 +42,6 @@ data/processed/*
 *.qgz~
 *.qgs~
 *.qml~
+
+# Local backend development configuration
+backend/src/FormaGeo.Api/appsettings.Development.json
