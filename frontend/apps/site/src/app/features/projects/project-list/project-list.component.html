@@ -1,0 +1,65 @@
+<main class="projects-page">
+  <header class="projects-page__header">
+    <div>
+      <p class="projects-page__eyebrow">FormaGeo Site</p>
+      <h1>Projects</h1>
+      <p>Create a project before adding sites and analyses.</p>
+    </div>
+  </header>
+
+  <section class="project-create">
+    <h2>Create project</h2>
+
+    <form [formGroup]="projectForm" (ngSubmit)="createProject()">
+      <label for="project-name"> Project name </label>
+
+      <input
+        id="project-name"
+        type="text"
+        formControlName="name"
+        placeholder="Example: Quezon City Site Study"
+      />
+
+      @if (
+        projectForm.controls.name.touched && projectForm.controls.name.invalid
+      ) {
+        <p class="field-error">Enter a project name of up to 200 characters.</p>
+      }
+
+      <button type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Creating…' : 'Create project' }}
+      </button>
+    </form>
+  </section>
+
+  @if (errorMessage()) {
+    <p class="page-error">
+      {{ errorMessage() }}
+    </p>
+  }
+
+  <section class="project-list">
+    <h2>Your projects</h2>
+
+    @if (loading()) {
+      <p>Loading projects…</p>
+    } @else if (projects().length === 0) {
+      <p>No projects have been created yet.</p>
+    } @else {
+      <ul>
+        @for (project of projects(); track project.id) {
+          <li>
+            <article class="project-card">
+              <h3>{{ project.name }}</h3>
+
+              <p>
+                Created
+                {{ project.createdAtUtc | date: 'medium' }}
+              </p>
+            </article>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</main>
