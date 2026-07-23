@@ -1,0 +1,9 @@
+{
+  "name": "reach-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/reach-e2e/src",
+  "implicitDependencies": ["reach"],
+  "// targets": "to see all targets run: nx show project reach-e2e --web",
+  "targets": {}
+}

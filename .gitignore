@@ -1,0 +1,44 @@
+# macOS
+.DS_Store
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Angular and Nx
+**/node_modules/
+**/dist/
+**/.angular/
+**/.nx/
+**/coverage/
+
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+**/*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Local GIS data
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# QGIS temporary files
+*.qgz~
+*.qgs~
+*.qml~

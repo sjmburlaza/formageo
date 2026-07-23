@@ -1,0 +1,27 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": false,
+    "paths": {
+      "@frontend/ui": ["./libs/shared/ui/src/index.ts"],
+      "@frontend/map": ["./libs/shared/map/src/index.ts"],
+      "@frontend/authentication": ["./libs/shared/authentication/src/index.ts"],
+      "@frontend/api-client": ["./libs/shared/api-client/src/index.ts"],
+      "@frontend/models": ["./libs/shared/models/src/index.ts"],
+      "@frontend/geospatial": ["./libs/shared/geospatial/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

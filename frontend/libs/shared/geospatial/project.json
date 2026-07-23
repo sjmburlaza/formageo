@@ -1,0 +1,9 @@
+{
+  "name": "geospatial",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/geospatial/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:util"],
+  "// targets": "to see all targets run: nx show project geospatial --web",
+  "targets": {}
+}

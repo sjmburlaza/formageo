@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FormaGeo.Api/FormaGeo.Api.csproj" />
+    <Project Path="src/FormaGeo.Application/FormaGeo.Application.csproj" />
+    <Project Path="src/FormaGeo.Domain/FormaGeo.Domain.csproj" />
+    <Project Path="src/FormaGeo.Infrastructure/FormaGeo.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FormaGeo.ArchitectureTests/FormaGeo.ArchitectureTests.csproj" />
+    <Project Path="tests/FormaGeo.IntegrationTests/FormaGeo.IntegrationTests.csproj" />
+    <Project Path="tests/FormaGeo.UnitTests/FormaGeo.UnitTests.csproj" />
+  </Folder>
+</Solution>

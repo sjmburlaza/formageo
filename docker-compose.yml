@@ -1,0 +1,31 @@
+services:
+  postgis:
+    image: postgis/postgis:17-3.5
+    platform: linux/amd64
+    container_name: formageo-postgis
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-formageo}
+      POSTGRES_USER: ${POSTGRES_USER:-formageo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-formageo_dev}
+
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+
+    volumes:
+      - formageo-postgis-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-formageo} -d ${POSTGRES_DB:-formageo}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  formageo-postgis-data:

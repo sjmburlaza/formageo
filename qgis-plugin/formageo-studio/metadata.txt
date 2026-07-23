@@ -1,0 +1,12 @@
+[general]
+name=FormaGeo Studio
+description=Site feasibility and accessibility analysis tools for QGIS
+version=0.1.0
+qgisMinimumVersion=3.34
+author=sharmaneburlaza
+email=
+about=FormaGeo Studio connects professional QGIS workflows with the FormaGeo platform.
+category=Vector
+experimental=True
+deprecated=False
+hasProcessingProvider=False
