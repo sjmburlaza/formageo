@@ -4,11 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FormaGeo.Infrastructure.Persistence.Repositories;
 
-public sealed class ProjectRepository : IProjectRepository
+public sealed class ProjectRepository
+    : IProjectRepository
 {
     private readonly FormaGeoDbContext _dbContext;
 
-    public ProjectRepository(FormaGeoDbContext dbContext)
+    public ProjectRepository(
+        FormaGeoDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -19,15 +21,29 @@ public sealed class ProjectRepository : IProjectRepository
     {
         _dbContext.Projects.Add(project);
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Project>> GetAllAsync(
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Project>>
+        GetAllAsync(
+            CancellationToken cancellationToken = default)
     {
         return await _dbContext.Projects
             .AsNoTracking()
-            .OrderByDescending(project => project.CreatedAtUtc)
+            .OrderByDescending(project =>
+                project.CreatedAtUtc)
             .ToListAsync(cancellationToken);
+    }
+
+    public Task<bool> ExistsAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Projects
+            .AsNoTracking()
+            .AnyAsync(
+                project => project.Id == projectId,
+                cancellationToken);
     }
 }

@@ -1,0 +1,22 @@
+using FormaGeo.Domain.Sites;
+
+namespace FormaGeo.Application.Sites;
+
+public interface ISiteRepository
+{
+    Task AddAsync(
+        Site site,
+        CancellationToken cancellationToken = default);
+
+    Task<Site?> GetByIdAsync(
+        Guid siteId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Site>> GetByProjectIdAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(
+        Guid siteId,
+        CancellationToken cancellationToken = default);
+}

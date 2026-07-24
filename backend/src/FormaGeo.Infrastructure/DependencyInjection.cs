@@ -1,4 +1,5 @@
 using FormaGeo.Application.Projects;
+using FormaGeo.Application.Sites;
 using FormaGeo.Infrastructure.Persistence;
 using FormaGeo.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +29,13 @@ public static class DependencyInjection
                 });
         });
 
-        services.AddScoped<IProjectRepository, ProjectRepository>();
+        services.AddScoped<
+            IProjectRepository,
+            ProjectRepository>();
+
+        services.AddScoped<
+            ISiteRepository,
+            SiteRepository>();
 
         return services;
     }
