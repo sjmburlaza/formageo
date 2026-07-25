@@ -1,0 +1,65 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Terrain cell SW",
+        "minimumElevationMetres": 8,
+        "maximumElevationMetres": 22,
+        "meanElevationMetres": 15,
+        "meanSlopeDegrees": 2.4,
+        "steepAreaPercent": 1
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[120.995,14.550],[121.015,14.550],[121.015,14.568],[120.995,14.568],[120.995,14.550]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Terrain cell SE",
+        "minimumElevationMetres": 14,
+        "maximumElevationMetres": 42,
+        "meanElevationMetres": 27,
+        "meanSlopeDegrees": 7.2,
+        "steepAreaPercent": 8
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[121.015,14.550],[121.040,14.550],[121.040,14.568],[121.015,14.568],[121.015,14.550]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Terrain cell NW",
+        "minimumElevationMetres": 18,
+        "maximumElevationMetres": 38,
+        "meanElevationMetres": 28,
+        "meanSlopeDegrees": 5.5,
+        "steepAreaPercent": 5
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[120.995,14.568],[121.015,14.568],[121.015,14.590],[120.995,14.590],[120.995,14.568]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Terrain cell NE",
+        "minimumElevationMetres": 26,
+        "maximumElevationMetres": 74,
+        "meanElevationMetres": 49,
+        "meanSlopeDegrees": 13.5,
+        "steepAreaPercent": 31
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[121.015,14.568],[121.040,14.568],[121.040,14.590],[121.015,14.590],[121.015,14.568]]]
+      }
+    }
+  ]
+}

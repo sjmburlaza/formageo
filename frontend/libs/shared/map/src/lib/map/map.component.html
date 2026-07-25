@@ -6,51 +6,53 @@
 >
   <div #mapCanvas class="fg-map-canvas"></div>
 
-  <div class="fg-map-tools" aria-label="Geometry tools">
-    <button
-      class="fg-map-tool"
-      type="button"
-      [class.fg-map-tool--active]="mode() === 'drawing'"
-      [attr.aria-pressed]="mode() === 'drawing'"
-      aria-label="Draw polygon"
-      title="Draw polygon"
-      (click)="mode() === 'drawing' ? cancelDrawing() : startDrawing()"
-    >
-      <svg lucidePenTool aria-hidden="true"></svg>
-    </button>
-    <button
-      class="fg-map-tool"
-      type="button"
-      [class.fg-map-tool--active]="mode() === 'editing'"
-      [attr.aria-pressed]="mode() === 'editing'"
-      [disabled]="!selectedFeatureIdSignal() || !selectedFeatureEditable()"
-      aria-label="Edit selected polygon"
-      title="Edit selected polygon"
-      (click)="mode() === 'editing' ? stopEditing() : editSelected()"
-    >
-      <svg lucidePencil aria-hidden="true"></svg>
-    </button>
-    <button
-      class="fg-map-tool"
-      type="button"
-      [disabled]="!selectedFeatureIdSignal()"
-      aria-label="Fit map to selected polygon"
-      title="Fit to selection"
-      (click)="fitSelectedFeature()"
-    >
-      <svg lucideExpand aria-hidden="true"></svg>
-    </button>
-    <button
-      class="fg-map-tool fg-map-tool--danger"
-      type="button"
-      [disabled]="!selectedFeatureIdSignal()"
-      aria-label="Delete selected polygon"
-      title="Delete selected polygon"
-      (click)="requestSelectedFeatureRemoval()"
-    >
-      <svg lucideTrash2 aria-hidden="true"></svg>
-    </button>
-  </div>
+  @if (interactionTools) {
+    <div class="fg-map-tools" aria-label="Geometry tools">
+      <button
+        class="fg-map-tool"
+        type="button"
+        [class.fg-map-tool--active]="mode() === 'drawing'"
+        [attr.aria-pressed]="mode() === 'drawing'"
+        aria-label="Draw polygon"
+        title="Draw polygon"
+        (click)="mode() === 'drawing' ? cancelDrawing() : startDrawing()"
+      >
+        <svg lucidePenTool aria-hidden="true"></svg>
+      </button>
+      <button
+        class="fg-map-tool"
+        type="button"
+        [class.fg-map-tool--active]="mode() === 'editing'"
+        [attr.aria-pressed]="mode() === 'editing'"
+        [disabled]="!selectedFeatureIdSignal() || !selectedFeatureEditable()"
+        aria-label="Edit selected polygon"
+        title="Edit selected polygon"
+        (click)="mode() === 'editing' ? stopEditing() : editSelected()"
+      >
+        <svg lucidePencil aria-hidden="true"></svg>
+      </button>
+      <button
+        class="fg-map-tool"
+        type="button"
+        [disabled]="!selectedFeatureIdSignal()"
+        aria-label="Fit map to selected polygon"
+        title="Fit to selection"
+        (click)="fitSelectedFeature()"
+      >
+        <svg lucideExpand aria-hidden="true"></svg>
+      </button>
+      <button
+        class="fg-map-tool fg-map-tool--danger"
+        type="button"
+        [disabled]="!selectedFeatureIdSignal()"
+        aria-label="Delete selected polygon"
+        title="Delete selected polygon"
+        (click)="requestSelectedFeatureRemoval()"
+      >
+        <svg lucideTrash2 aria-hidden="true"></svg>
+      </button>
+    </div>
+  }
 
   <fg-layer-panel
     [baseMaps]="baseMaps"

@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Southern Storm-Surge Demonstration Zone",
+        "exposureLevel": "Moderate",
+        "scenario": "Illustrative coastal inundation extent"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[120.985,14.548],[121.045,14.548],[121.045,14.563],[120.985,14.563],[120.985,14.548]]]
+      }
+    }
+  ]
+}

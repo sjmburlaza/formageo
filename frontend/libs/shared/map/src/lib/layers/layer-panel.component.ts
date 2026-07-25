@@ -31,6 +31,7 @@ const CATEGORY_ORDER: LayerCategory[] = [
   'Planning',
   'Hazards',
   'Environment',
+  'Terrain',
   'Transport',
   'Facilities',
 ];
@@ -65,8 +66,9 @@ export class LayerPanelComponent {
   readonly overlayChanged = output<MapOverlayStateChange>();
 
   protected readonly open = signal(false);
-  protected readonly expandedCategories =
-    signal<ReadonlySet<string>>(new Set(['Base maps']));
+  protected readonly expandedCategories = signal<ReadonlySet<string>>(
+    new Set(['Base maps']),
+  );
   protected readonly legendLayerId = signal<string | null>(null);
   protected readonly infoLayerId = signal<string | null>(null);
   protected readonly filterLayerId = signal<string | null>(null);
@@ -119,14 +121,12 @@ export class LayerPanelComponent {
   }
 
   protected updateOpacity(overlay: MapOverlay, event: Event): void {
-    const opacity =
-      Number((event.target as HTMLInputElement).value) / 100;
+    const opacity = Number((event.target as HTMLInputElement).value) / 100;
     this.emitChange(overlay, { opacity });
   }
 
   protected updateFilter(overlay: MapOverlay, event: Event): void {
-    const filter =
-      (event.target as HTMLInputElement).value.trim() || null;
+    const filter = (event.target as HTMLInputElement).value.trim() || null;
     this.emitChange(overlay, { filter });
   }
 
@@ -134,9 +134,7 @@ export class LayerPanelComponent {
     const ordered = [...this.overlays].sort(
       (left, right) => left.sortOrder - right.sortOrder,
     );
-    const index = ordered.findIndex(
-      (candidate) => candidate.id === overlay.id,
-    );
+    const index = ordered.findIndex((candidate) => candidate.id === overlay.id);
     const swapIndex = index + direction;
 
     if (index < 0 || swapIndex < 0 || swapIndex >= ordered.length) {
@@ -175,10 +173,7 @@ export class LayerPanelComponent {
       visible: changes.visible ?? overlay.visible,
       opacity: changes.opacity ?? overlay.opacity,
       sortOrder: changes.sortOrder ?? overlay.sortOrder,
-      filter:
-        changes.filter === undefined
-          ? overlay.filter
-          : changes.filter,
+      filter: changes.filter === undefined ? overlay.filter : changes.filter,
     });
   }
 }

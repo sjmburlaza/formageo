@@ -2,7 +2,7 @@
   "analysisId": "d8df8ca8-95b8-48d4-b7dc-302c39453460",
   "siteId": "3d54654c-6aa8-48cb-adb4-79e174f4ef24",
   "analysisType": "HazardExposure",
-  "analysisVersion": "1.0.0",
+  "analysisVersion": "2.0.0",
   "siteGeometry": {
     "type": "Polygon",
     "coordinates": [
@@ -16,6 +16,7 @@
     ]
   },
   "inputParameters": {
-    "minimumOverlapPercent": 0
+    "minimumOverlapPercent": 0,
+    "faultSearchDistanceMetres": 5000
   }
 }

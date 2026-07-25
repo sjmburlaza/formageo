@@ -12,15 +12,114 @@ from pyproj import Transformer
 from shapely.geometry import LineString, mapping, shape
 from shapely.ops import nearest_points, transform, unary_union
 
-ANALYSIS_VERSION = "1.0.0"
+ANALYSIS_VERSION = "2.0.0"
 SUPPORTED_ANALYSES = {
     "SiteGeometry",
     "HazardExposure",
     "Zoning",
+    "Terrain",
     "Accessibility",
     "NearbyFacilities",
     "Suitability",
 }
+
+DATA_SOURCES = {
+    "flood": {
+        "id": "fg-demo-flood",
+        "dataset": "Flood susceptibility demonstration areas",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/flood-susceptibility.geojson",
+        "license": "CC0 1.0",
+    },
+    "landslide": {
+        "id": "fg-demo-landslide",
+        "dataset": "Landslide susceptibility demonstration areas",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/landslide-susceptibility.geojson",
+        "license": "CC0 1.0",
+    },
+    "stormSurge": {
+        "id": "fg-demo-storm-surge",
+        "dataset": "Storm-surge demonstration zones",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/storm-surge-zones.geojson",
+        "license": "CC0 1.0",
+    },
+    "faultLines": {
+        "id": "fg-demo-fault-lines",
+        "dataset": "Fault-line demonstration traces",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/fault-lines.geojson",
+        "license": "CC0 1.0",
+    },
+    "protectedAreas": {
+        "id": "fg-demo-protected-areas",
+        "dataset": "Protected-area demonstration boundaries",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/protected-areas.geojson",
+        "license": "CC0 1.0",
+    },
+    "zoning": {
+        "id": "fg-demo-zoning",
+        "dataset": "Land-use zoning demonstration areas",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/land-use-zones.geojson",
+        "license": "CC0 1.0",
+    },
+    "jurisdictions": {
+        "id": "fg-demo-jurisdictions",
+        "dataset": "Planning district demonstration boundaries",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/planning-districts.geojson",
+        "license": "CC0 1.0",
+    },
+    "restrictions": {
+        "id": "fg-demo-restrictions",
+        "dataset": "Development restriction demonstration areas",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/development-restrictions.geojson",
+        "license": "CC0 1.0",
+    },
+    "terrain": {
+        "id": "fg-demo-terrain",
+        "dataset": "Terrain summary demonstration grid",
+        "organization": "FormaGeo",
+        "dataVersion": "2026.07",
+        "publishedDate": "2026-07-26",
+        "coordinateSystem": "EPSG:4326",
+        "sourceUrl": "/layers/terrain-summary-grid.geojson",
+        "license": "CC0 1.0",
+    },
+}
+
+DEMONSTRATION_LIMITATION = (
+    "This is synthetic demonstration data for workflow validation and must not "
+    "be used for permitting, engineering design, emergency planning, or risk decisions."
+)
 
 
 class AnalysisValidationError(ValueError):
@@ -136,6 +235,7 @@ def run_analysis(
         "SiteGeometry": _site_geometry,
         "HazardExposure": _hazard_exposure,
         "Zoning": _zoning,
+        "Terrain": _terrain,
         "Accessibility": _accessibility,
         "NearbyFacilities": _nearby_facilities,
         "Suitability": _suitability,
@@ -184,7 +284,10 @@ def _hazard_exposure(
     parameters: dict[str, Any],
     datasets: DatasetRepository,
 ) -> dict[str, Any]:
-    _reject_unknown(parameters, {"minimumOverlapPercent"})
+    _reject_unknown(
+        parameters,
+        {"minimumOverlapPercent", "faultSearchDistanceMetres"},
+    )
     minimum_overlap = _number(
         parameters,
         "minimumOverlapPercent",
@@ -192,58 +295,205 @@ def _hazard_exposure(
         minimum=0,
         maximum=100,
     )
+    fault_search_distance = _number(
+        parameters,
+        "faultSearchDistanceMetres",
+        default=5000,
+        minimum=100,
+        maximum=100_000,
+    )
     site_metric, forward, _ = _metric_geometry(site)
-    exposures: list[dict[str, Any]] = []
-    intersections = []
+    evidence: list[dict[str, Any]] = []
+    affected_geometries = []
 
-    for feature in datasets.load("flood-susceptibility.geojson"):
-        intersection = site.intersection(feature["geometry"])
-        if intersection.is_empty:
-            continue
+    hazard_datasets = [
+        (
+            "flood-zone",
+            "Flood-zone intersection",
+            "flood-susceptibility.geojson",
+            "flood",
+            "susceptibility",
+        ),
+        (
+            "landslide",
+            "Landslide exposure",
+            "landslide-susceptibility.geojson",
+            "landslide",
+            "susceptibility",
+        ),
+        (
+            "storm-surge",
+            "Storm-surge exposure",
+            "storm-surge-zones.geojson",
+            "stormSurge",
+            "exposureLevel",
+        ),
+        (
+            "protected-area",
+            "Protected-area overlap",
+            "protected-areas.geojson",
+            "protectedAreas",
+            "designation",
+        ),
+    ]
 
-        area = transform(forward, intersection).area
-        overlap_percent = _percent(area, site_metric.area)
-        if overlap_percent < minimum_overlap:
-            continue
+    for result_id, name, filename, source_key, classification_property in (
+        hazard_datasets
+    ):
+        result, intersection = _polygon_evidence(
+            site,
+            site_metric.area,
+            forward,
+            datasets.load(filename),
+            result_id=result_id,
+            name=name,
+            category="Hazards",
+            source_key=source_key,
+            classification_property=classification_property,
+            minimum_overlap_percent=minimum_overlap,
+            limitation=(
+                f"{DEMONSTRATION_LIMITATION} Mapped boundaries are generalized "
+                "and do not model event probability, depth, velocity, or local mitigation."
+            ),
+        )
+        evidence.append(result)
+        if intersection is not None and not intersection.is_empty:
+            affected_geometries.append(intersection)
 
-        intersections.append(intersection)
-        exposures.append(
+    fault_features = datasets.load("fault-lines.geojson")
+    if not fault_features:
+        raise DatasetLoadError("The fault-line dataset contains no features.")
+    fault_metric = unary_union(
+        [transform(forward, feature["geometry"]) for feature in fault_features]
+    )
+    site_point, fault_point = nearest_points(site_metric, fault_metric)
+    fault_distance = site_point.distance(fault_point)
+    nearest_fault = min(
+        fault_features,
+        key=lambda feature: site_metric.distance(
+            transform(forward, feature["geometry"])
+        ),
+    )
+    fault_geometry_features = [
+        _feature(
+            nearest_fault["geometry"],
             {
-                "name": feature["properties"].get("name", "Mapped hazard area"),
-                "susceptibility": feature["properties"].get("susceptibility"),
-                "overlapSquareMetres": _rounded(area, 2),
-                "overlapPercent": _rounded(overlap_percent, 2),
-            }
+                **nearest_fault["properties"],
+                "role": "nearestFaultTrace",
+            },
+        )
+    ]
+    if fault_distance > 0:
+        inverse = _metric_geometry(site)[2]
+        connector = transform(
+            inverse,
+            LineString([site_point.coords[0], fault_point.coords[0]]),
+        )
+        fault_geometry_features.append(
+            _feature(
+                connector,
+                {
+                    "role": "faultDistance",
+                    "distanceMetres": _rounded(fault_distance, 2),
+                },
+            )
         )
 
-    affected = unary_union(intersections) if intersections else None
+    fault_severity = (
+        "High"
+        if fault_distance <= 500
+        else "Moderate"
+        if fault_distance <= 2000
+        else "Low"
+        if fault_distance <= fault_search_distance
+        else "None"
+    )
+    fault_classification = (
+        "Intersects mapped trace"
+        if fault_distance == 0
+        else f"{_rounded(fault_distance / 1000, 2)} km from nearest mapped trace"
+    )
+    fault_source = _source("faultLines")
+    evidence.append(
+        {
+            "id": "fault-line-proximity",
+            "name": "Fault-line proximity",
+            "category": "Hazards",
+            "summary": (
+                f"The nearest mapped fault trace is {_rounded(fault_distance, 0):.0f} "
+                f"metres from the site ({fault_severity.lower()} proximity exposure)."
+            ),
+            "severity": fault_severity,
+            "classification": fault_classification,
+            "intersectionAreaSquareMetres": 0,
+            "sitePercent": 0,
+            "resultGeometry": {
+                "type": "FeatureCollection",
+                "features": fault_geometry_features,
+            },
+            "source": fault_source,
+            "dataVersion": fault_source["dataVersion"],
+            "methodology": (
+                "Shortest planar distance from the site boundary to the nearest "
+                "mapped fault trace, measured in the site's local UTM zone."
+            ),
+            "limitations": [
+                DEMONSTRATION_LIMITATION,
+                "Distance to a generalized mapped trace is not a site-specific fault investigation.",
+            ],
+            "details": {
+                "distanceMetres": _rounded(fault_distance, 2),
+                "searchDistanceMetres": fault_search_distance,
+                "nearestFeature": nearest_fault["properties"],
+            },
+        }
+    )
+
+    affected = (
+        unary_union(affected_geometries)
+        if affected_geometries
+        else None
+    )
     affected_area = (
         transform(forward, affected).area
         if affected is not None and not affected.is_empty
         else 0
     )
+    highest_severity = _highest_severity(evidence)
+    result_geometry = _combined_result_geometry(evidence)
 
     return {
         "summary": (
+            f"{len(evidence)} hazard and environmental checks completed. "
             f"{_rounded(_percent(affected_area, site_metric.area), 2)}% of the "
-            "site overlaps mapped hazard areas."
-            if affected_area
-            else "No mapped hazard overlap was found."
+            f"site intersects at least one mapped polygon exposure."
         ),
+        "category": "Hazards",
+        "severity": highest_severity,
+        "classification": f"{highest_severity} overall mapped exposure",
+        "intersectionAreaSquareMetres": _rounded(affected_area, 2),
+        "sitePercent": _rounded(_percent(affected_area, site_metric.area), 2),
         "metrics": {
             "affectedAreaSquareMetres": _rounded(affected_area, 2),
             "affectedPercent": _rounded(
                 _percent(affected_area, site_metric.area), 2
             ),
-            "exposureCount": len(exposures),
+            "checkCount": len(evidence),
+            "mappedExposureCount": sum(
+                1 for result in evidence if result["severity"] != "None"
+            ),
+            "highestSeverity": highest_severity,
         },
-        "exposures": exposures,
-        "dataNotice": "Demonstration hazard data; not suitable for risk decisions.",
-        "resultGeometry": (
-            _feature(affected, {"role": "hazardExposure"})
-            if affected is not None and not affected.is_empty
-            else None
+        "results": evidence,
+        "exposures": evidence,
+        "methodology": (
+            "Polygon exposures are clipped to the site and measured using a local "
+            "UTM projection. Fault proximity uses the shortest boundary-to-trace distance."
         ),
+        "limitations": [DEMONSTRATION_LIMITATION],
+        "sourceMetadata": _unique_sources(evidence),
+        "dataNotice": DEMONSTRATION_LIMITATION,
+        "resultGeometry": result_geometry,
     }
 
 
@@ -255,40 +505,104 @@ def _zoning(
     _reject_unknown(parameters, {"includeUnzoned"})
     include_unzoned = _boolean(parameters, "includeUnzoned", default=True)
     site_metric, forward, _ = _metric_geometry(site)
-    overlaps: list[dict[str, Any]] = []
-    covered_geometries = []
-
-    for feature in datasets.load("land-use-zones.geojson"):
-        intersection = site.intersection(feature["geometry"])
-        if intersection.is_empty:
-            continue
-
-        area = transform(forward, intersection).area
-        covered_geometries.append(intersection)
-        overlaps.append(
-            {
-                "name": feature["properties"].get("name", "Mapped zone"),
-                "landUse": feature["properties"].get("landUse", "Unclassified"),
-                "areaSquareMetres": _rounded(area, 2),
-                "sitePercent": _rounded(_percent(area, site_metric.area), 2),
-            }
-        )
-
-    covered = unary_union(covered_geometries) if covered_geometries else None
+    zoning_features = datasets.load("land-use-zones.geojson")
+    zoning_result, covered = _polygon_evidence(
+        site,
+        site_metric.area,
+        forward,
+        zoning_features,
+        result_id="zoning-classification",
+        name="Zoning and land-use classification",
+        category="Planning",
+        source_key="zoning",
+        classification_property="landUse",
+        limitation=(
+            f"{DEMONSTRATION_LIMITATION} Zone boundaries and labels may be "
+            "generalized and do not replace the legally adopted zoning map."
+        ),
+    )
+    jurisdiction_result, jurisdiction_geometry = _polygon_evidence(
+        site,
+        site_metric.area,
+        forward,
+        datasets.load("planning-districts.geojson"),
+        result_id="administrative-jurisdiction",
+        name="Administrative jurisdiction",
+        category="Planning",
+        source_key="jurisdictions",
+        classification_property="name",
+        severity_label="Informational",
+        limitation=(
+            f"{DEMONSTRATION_LIMITATION} Administrative boundaries may not "
+            "reflect cadastral, barangay, municipal, or agency-specific jurisdiction."
+        ),
+    )
+    restriction_result, restriction_geometry = _polygon_evidence(
+        site,
+        site_metric.area,
+        forward,
+        datasets.load("development-restrictions.geojson"),
+        result_id="development-restrictions",
+        name="Development restrictions",
+        category="Planning",
+        source_key="restrictions",
+        classification_property="restriction",
+        limitation=(
+            f"{DEMONSTRATION_LIMITATION} Only mapped demonstration restrictions "
+            "are checked; easements, title conditions, and agency clearances are excluded."
+        ),
+    )
+    planning_results = [
+        zoning_result,
+        jurisdiction_result,
+        restriction_result,
+    ]
     unzoned = (
         site.difference(covered)
         if covered is not None and not covered.is_empty
         else site
     )
     unzoned_area = transform(forward, unzoned).area if include_unzoned else 0
+    overlaps = zoning_result["details"]["intersections"]
+    planning_geometries = [
+        geometry
+        for geometry in [covered, jurisdiction_geometry, restriction_geometry]
+        if geometry is not None and not geometry.is_empty
+    ]
+    planning_coverage = (
+        unary_union(planning_geometries)
+        if planning_geometries
+        else None
+    )
+    planning_area = (
+        transform(forward, site.intersection(planning_coverage)).area
+        if planning_coverage is not None
+        else 0
+    )
+    primary_classification = zoning_result["classification"]
 
     return {
         "summary": (
             f"The site overlaps {len(overlaps)} mapped "
-            f"{'zone' if len(overlaps) == 1 else 'zones'}."
+            f"{'zone' if len(overlaps) == 1 else 'zones'} and "
+            f"{len(jurisdiction_result['details']['intersections'])} planning "
+            f"{'jurisdiction' if len(jurisdiction_result['details']['intersections']) == 1 else 'jurisdictions'}."
         ),
+        "category": "Planning",
+        "severity": restriction_result["severity"],
+        "classification": primary_classification,
+        "intersectionAreaSquareMetres": _rounded(planning_area, 2),
+        "sitePercent": _rounded(_percent(planning_area, site_metric.area), 2),
         "metrics": {
             "zoneCount": len(overlaps),
+            "primaryLandUse": primary_classification,
+            "jurisdictionCount": len(
+                jurisdiction_result["details"]["intersections"]
+            ),
+            "restrictedAreaSquareMetres": restriction_result[
+                "intersectionAreaSquareMetres"
+            ],
+            "restrictedPercent": restriction_result["sitePercent"],
             "unzonedAreaSquareMetres": (
                 _rounded(unzoned_area, 2) if include_unzoned else None
             ),
@@ -298,13 +612,192 @@ def _zoning(
                 else None
             ),
         },
+        "results": planning_results,
         "zones": overlaps,
-        "dataNotice": "Illustrative zoning only.",
-        "resultGeometry": (
-            _feature(covered, {"role": "zoningOverlap"})
-            if covered is not None and not covered.is_empty
-            else None
+        "methodology": (
+            "Each planning layer is clipped to the site in WGS 84, then measured "
+            "in the site's local UTM zone. The dominant class is the class with "
+            "the greatest intersected area."
         ),
+        "limitations": [DEMONSTRATION_LIMITATION],
+        "sourceMetadata": _unique_sources(planning_results),
+        "dataNotice": DEMONSTRATION_LIMITATION,
+        "resultGeometry": _combined_result_geometry(planning_results),
+    }
+
+
+def _terrain(
+    site: Any,
+    parameters: dict[str, Any],
+    datasets: DatasetRepository,
+) -> dict[str, Any]:
+    _reject_unknown(parameters, {"steepSlopeThresholdDegrees"})
+    steep_threshold = _number(
+        parameters,
+        "steepSlopeThresholdDegrees",
+        default=15,
+        minimum=1,
+        maximum=60,
+    )
+    site_metric, forward, _ = _metric_geometry(site)
+    covered_geometries = []
+    cell_results = []
+    total_weighted_elevation = 0.0
+    total_weighted_slope = 0.0
+    estimated_steep_area = 0.0
+    minimum_elevations = []
+    maximum_elevations = []
+
+    for feature in datasets.load("terrain-summary-grid.geojson"):
+        intersection = site.intersection(feature["geometry"])
+        if intersection.is_empty:
+            continue
+
+        properties = feature["properties"]
+        area = transform(forward, intersection).area
+        covered_geometries.append(intersection)
+        mean_elevation = _required_dataset_number(
+            properties,
+            "meanElevationMetres",
+            "terrain-summary-grid.geojson",
+        )
+        mean_slope = _required_dataset_number(
+            properties,
+            "meanSlopeDegrees",
+            "terrain-summary-grid.geojson",
+        )
+        source_steep_percent = _required_dataset_number(
+            properties,
+            "steepAreaPercent",
+            "terrain-summary-grid.geojson",
+        )
+        minimum_elevations.append(
+            _required_dataset_number(
+                properties,
+                "minimumElevationMetres",
+                "terrain-summary-grid.geojson",
+            )
+        )
+        maximum_elevations.append(
+            _required_dataset_number(
+                properties,
+                "maximumElevationMetres",
+                "terrain-summary-grid.geojson",
+            )
+        )
+        total_weighted_elevation += mean_elevation * area
+        total_weighted_slope += mean_slope * area
+        estimated_steep_area += area * source_steep_percent / 100
+        cell_results.append(
+            _feature(
+                intersection,
+                {
+                    **properties,
+                    "role": "terrainEvidence",
+                    "intersectionAreaSquareMetres": _rounded(area, 2),
+                    "sitePercent": _rounded(_percent(area, site_metric.area), 2),
+                },
+            )
+        )
+
+    covered = unary_union(covered_geometries) if covered_geometries else None
+    covered_area = (
+        transform(forward, covered).area
+        if covered is not None and not covered.is_empty
+        else 0
+    )
+    if covered_area <= 0:
+        raise DatasetLoadError(
+            "The terrain dataset does not cover the submitted site."
+        )
+
+    average_elevation = total_weighted_elevation / covered_area
+    average_slope = total_weighted_slope / covered_area
+    steep_percent = _percent(estimated_steep_area, site_metric.area)
+    classification = (
+        "Steep terrain"
+        if average_slope >= steep_threshold
+        else "Moderately sloping terrain"
+        if average_slope >= 8
+        else "Gently sloping terrain"
+        if average_slope >= 3
+        else "Near-level terrain"
+    )
+    severity = (
+        "High"
+        if steep_percent >= 30
+        else "Moderate"
+        if steep_percent >= 10
+        else "Low"
+    )
+    source = _source("terrain")
+    result_geometry = {
+        "type": "FeatureCollection",
+        "features": cell_results,
+    }
+    evidence = {
+        "id": "terrain-profile",
+        "name": "Terrain profile",
+        "category": "Terrain",
+        "summary": (
+            f"Average elevation is {_rounded(average_elevation, 1)} m and "
+            f"average slope is {_rounded(average_slope, 1)}°; "
+            f"{_rounded(steep_percent, 1)}% of the site is estimated steep."
+        ),
+        "severity": severity,
+        "classification": classification,
+        "intersectionAreaSquareMetres": _rounded(covered_area, 2),
+        "sitePercent": _rounded(_percent(covered_area, site_metric.area), 2),
+        "resultGeometry": result_geometry,
+        "source": source,
+        "dataVersion": source["dataVersion"],
+        "methodology": (
+            "Terrain cell summaries are clipped to the site. Mean elevation and "
+            "slope are area-weighted; minimum and maximum elevation are the extrema "
+            "of intersecting cells. Steep area uses each cell's summarized proportion."
+        ),
+        "limitations": [
+            DEMONSTRATION_LIMITATION,
+            (
+                "Statistics are aggregated from generalized terrain cells and are "
+                "not a substitute for a topographic or geotechnical survey."
+            ),
+            (
+                f"The source grid defines steep terrain using a 15° threshold; the "
+                f"requested {steep_threshold:g}° threshold affects classification only."
+            ),
+        ],
+        "details": {
+            "minimumElevationMetres": _rounded(min(minimum_elevations), 1),
+            "maximumElevationMetres": _rounded(max(maximum_elevations), 1),
+            "averageElevationMetres": _rounded(average_elevation, 1),
+            "averageSlopeDegrees": _rounded(average_slope, 1),
+            "steepAreaSquareMetres": _rounded(estimated_steep_area, 2),
+            "steepAreaPercent": _rounded(steep_percent, 2),
+            "steepSlopeThresholdDegrees": steep_threshold,
+            "coveredCellCount": len(cell_results),
+        },
+    }
+
+    return {
+        "summary": evidence["summary"],
+        "category": "Terrain",
+        "severity": severity,
+        "classification": classification,
+        "intersectionAreaSquareMetres": _rounded(covered_area, 2),
+        "sitePercent": _rounded(_percent(covered_area, site_metric.area), 2),
+        "metrics": {
+            **evidence["details"],
+            "coveragePercent": _rounded(
+                _percent(covered_area, site_metric.area), 2
+            ),
+        },
+        "results": [evidence],
+        "methodology": evidence["methodology"],
+        "limitations": evidence["limitations"],
+        "sourceMetadata": [source],
+        "dataNotice": DEMONSTRATION_LIMITATION,
+        "resultGeometry": result_geometry,
     }
 
 
@@ -625,6 +1118,200 @@ def _intersection_area(
     if not intersections:
         return 0
     return transform(forward, unary_union(intersections)).area
+
+
+def _polygon_evidence(
+    site: Any,
+    site_area: float,
+    forward: Any,
+    features: list[dict[str, Any]],
+    *,
+    result_id: str,
+    name: str,
+    category: str,
+    source_key: str,
+    classification_property: str,
+    limitation: str,
+    minimum_overlap_percent: float = 0,
+    severity_label: str | None = None,
+) -> tuple[dict[str, Any], Any | None]:
+    intersections = []
+    details = []
+    result_features = []
+
+    for feature in features:
+        intersection = site.intersection(feature["geometry"])
+        if intersection.is_empty:
+            continue
+
+        area = transform(forward, intersection).area
+        site_percent = _percent(area, site_area)
+        if site_percent < minimum_overlap_percent:
+            continue
+
+        properties = feature["properties"]
+        classification = str(
+            properties.get(classification_property)
+            or properties.get("name")
+            or "Mapped area"
+        )
+        intersections.append(intersection)
+        details.append(
+            {
+                "name": properties.get("name", "Mapped area"),
+                "classification": classification,
+                "areaSquareMetres": _rounded(area, 2),
+                "sitePercent": _rounded(site_percent, 2),
+                "properties": properties,
+            }
+        )
+        result_features.append(
+            _feature(
+                intersection,
+                {
+                    **properties,
+                    "role": result_id,
+                    "classification": classification,
+                    "intersectionAreaSquareMetres": _rounded(area, 2),
+                    "sitePercent": _rounded(site_percent, 2),
+                },
+            )
+        )
+
+    intersection_geometry = (
+        unary_union(intersections) if intersections else None
+    )
+    intersection_area = (
+        transform(forward, intersection_geometry).area
+        if intersection_geometry is not None
+        and not intersection_geometry.is_empty
+        else 0
+    )
+    site_percent = _percent(intersection_area, site_area)
+    details.sort(key=lambda item: item["areaSquareMetres"], reverse=True)
+    primary_classification = (
+        details[0]["classification"] if details else "No mapped overlap"
+    )
+    severity = (
+        severity_label
+        if severity_label is not None and details
+        else "None"
+        if not details
+        else "High"
+        if site_percent >= 30
+        else "Moderate"
+        if site_percent >= 10
+        else "Low"
+    )
+    source = _source(source_key)
+    result_geometry = (
+        {
+            "type": "FeatureCollection",
+            "features": result_features,
+        }
+        if result_features
+        else None
+    )
+
+    return (
+        {
+            "id": result_id,
+            "name": name,
+            "category": category,
+            "summary": (
+                f"{_rounded(site_percent, 2)}% of the site intersects "
+                f"{len(details)} mapped "
+                f"{'feature' if len(details) == 1 else 'features'}; "
+                f"the dominant classification is {primary_classification}."
+                if details
+                else "No mapped overlap was found in the source dataset."
+            ),
+            "severity": severity,
+            "classification": primary_classification,
+            "intersectionAreaSquareMetres": _rounded(intersection_area, 2),
+            "sitePercent": _rounded(site_percent, 2),
+            "resultGeometry": result_geometry,
+            "source": source,
+            "dataVersion": source["dataVersion"],
+            "methodology": (
+                "Source polygons are intersected with the site in WGS 84. "
+                "Area is measured in the site's local UTM projection and divided "
+                "by total site area. The dominant classification has the largest overlap."
+            ),
+            "limitations": [limitation],
+            "details": {
+                "featureCount": len(details),
+                "intersections": details,
+            },
+        },
+        intersection_geometry,
+    )
+
+
+def _source(source_key: str) -> dict[str, Any]:
+    return dict(DATA_SOURCES[source_key])
+
+
+def _unique_sources(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sources: dict[str, dict[str, Any]] = {}
+    for result in results:
+        source = result.get("source")
+        if isinstance(source, dict) and source.get("id"):
+            sources[str(source["id"])] = source
+    return list(sources.values())
+
+
+def _combined_result_geometry(
+    results: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    features = []
+    for result in results:
+        geometry = result.get("resultGeometry")
+        if not isinstance(geometry, dict):
+            continue
+        if geometry.get("type") == "Feature":
+            features.append(geometry)
+        elif geometry.get("type") == "FeatureCollection":
+            features.extend(geometry.get("features") or [])
+    return (
+        {"type": "FeatureCollection", "features": features}
+        if features
+        else None
+    )
+
+
+def _highest_severity(results: list[dict[str, Any]]) -> str:
+    ranking = {
+        "None": 0,
+        "Informational": 0,
+        "Low": 1,
+        "Moderate": 2,
+        "High": 3,
+        "Critical": 4,
+    }
+    return max(
+        (str(result.get("severity", "None")) for result in results),
+        key=lambda value: ranking.get(value, 0),
+        default="None",
+    )
+
+
+def _required_dataset_number(
+    properties: dict[str, Any],
+    name: str,
+    filename: str,
+) -> float:
+    value = properties.get(name)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise DatasetLoadError(
+            f"Dataset '{filename}' requires numeric property '{name}'."
+        )
+    number = float(value)
+    if not math.isfinite(number):
+        raise DatasetLoadError(
+            f"Dataset '{filename}' property '{name}' must be finite."
+        )
+    return number
 
 
 def _feature(geometry: Any, properties: dict[str, Any]) -> dict[str, Any]:

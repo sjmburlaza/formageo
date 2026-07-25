@@ -2,6 +2,7 @@ export type AnalysisType =
   | 'SiteGeometry'
   | 'HazardExposure'
   | 'Zoning'
+  | 'Terrain'
   | 'Accessibility'
   | 'NearbyFacilities'
   | 'Suitability';
@@ -36,9 +37,46 @@ export interface AnalysisDefinition {
 
 export interface AnalysisResult {
   summary?: string;
+  category?: string;
+  severity?: string;
+  classification?: string;
+  intersectionAreaSquareMetres?: number;
+  sitePercent?: number;
   metrics?: Record<string, unknown>;
+  results?: AnalysisEvidenceResult[];
+  methodology?: string;
+  limitations?: string[];
+  sourceMetadata?: AnalysisEvidenceSource[];
   resultGeometry?: GeoJsonResult | null;
   [key: string]: unknown;
+}
+
+export interface AnalysisEvidenceSource {
+  id: string;
+  dataset: string;
+  organization: string;
+  dataVersion: string;
+  publishedDate: string;
+  coordinateSystem: string;
+  sourceUrl: string;
+  license: string;
+}
+
+export interface AnalysisEvidenceResult {
+  id: string;
+  name: string;
+  category: 'Hazards' | 'Planning' | 'Terrain' | string;
+  summary: string;
+  severity: string;
+  classification: string;
+  intersectionAreaSquareMetres: number;
+  sitePercent: number;
+  resultGeometry: GeoJsonResult | null;
+  source: AnalysisEvidenceSource;
+  dataVersion: string;
+  methodology: string;
+  limitations: string[];
+  details: Record<string, unknown>;
 }
 
 export type GeoJsonResult =

@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Creek Habitat Demonstration Reserve",
+        "designation": "Local habitat protection area",
+        "status": "Illustrative"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[121.008,14.568],[121.014,14.568],[121.014,14.579],[121.008,14.579],[121.008,14.568]]]
+      }
+    }
+  ]
+}

@@ -178,7 +178,7 @@
       <section class="map-panel" aria-label="Site boundary map">
         <fg-map
           [features]="mapFeatures()"
-          [overlays]="layerOverlays()"
+          [overlays]="mapOverlays()"
           [selectedFeatureId]="selectedSite()?.id ?? null"
           (geometryCreated)="handleGeometryCreated($event)"
           (geometryEdited)="handleGeometryEdited($event)"
@@ -588,7 +588,11 @@
                 }
               </section>
             } @else if (activeInspectorTab() === 'analysis') {
-              <fg-site-analysis [site]="site" />
+              <fg-site-analysis
+                [site]="site"
+                (resultOverlaysChanged)="handleAnalysisOverlaysChanged($event)"
+                (resultLayerRequested)="handleResultLayerRequested($event)"
+              />
             } @else {
               <section class="inspector-section">
                 <ol class="history-list">

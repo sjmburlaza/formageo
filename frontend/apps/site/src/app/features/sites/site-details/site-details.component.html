@@ -9,8 +9,8 @@
   @if (loading()) {
     <section class="page-state" aria-live="polite">
       <span class="spinner" aria-hidden="true"></span>
-      <h1>Loading site</h1>
-      <p>Retrieving the saved boundary…</p>
+      <h1>Loading site intelligence</h1>
+      <p>Retrieving the saved boundary and analysis history…</p>
     </section>
   } @else if (!site()) {
     <section class="page-state" role="alert">
@@ -30,12 +30,12 @@
     <div class="site-shell">
       <a class="back-link" [routerLink]="['/projects', site()!.projectId]">
         <svg lucideArrowLeft aria-hidden="true"></svg>
-        Back to project
+        Back to project map
       </a>
 
       <header class="site-header">
         <div>
-          <p class="eyebrow">Site boundary</p>
+          <p class="eyebrow">Analysis results</p>
           <h1>{{ site()!.name }}</h1>
           <div class="site-header__metadata">
             <span
@@ -45,7 +45,8 @@
               <i aria-hidden="true"></i>
               {{ site()!.status }}
             </span>
-            <span>Created {{ site()!.createdAtUtc | date: 'medium' }}</span>
+            <span>Boundary CRS · EPSG:4326</span>
+            <span>Updated {{ site()!.updatedAtUtc | date: 'medium' }}</span>
           </div>
         </div>
         <button
@@ -63,42 +64,61 @@
         <p class="error-banner" role="alert">{{ errorMessage() }}</p>
       }
 
-      <section class="details-grid">
-        <article class="card">
-          <p class="eyebrow">Metadata</p>
-          <h2>Site information</h2>
-          <dl>
+      <section class="analysis-workspace" aria-label="Site analysis workspace">
+        <section class="analysis-map" aria-label="Analysis result map">
+          <header>
             <div>
-              <dt>Site ID</dt>
-              <dd>
-                <code>{{ site()!.id }}</code>
-              </dd>
+              <p class="eyebrow">Spatial evidence</p>
+              <h2>Result map</h2>
             </div>
-            <div>
-              <dt>Project ID</dt>
-              <dd>
-                <code>{{ site()!.projectId }}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>Geometry</dt>
-              <dd>{{ site()!.boundary.type }}</dd>
-            </div>
-            <div>
-              <dt>Rings</dt>
-              <dd>{{ site()!.boundary.coordinates.length }}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article class="card card--code">
-          <div>
-            <p class="eyebrow">EPSG:4326</p>
-            <h2>Boundary GeoJSON</h2>
+            <span>Toggle each result independently</span>
+          </header>
+          <div class="analysis-map__canvas">
+            <fg-map
+              [features]="mapFeatures()"
+              [overlays]="analysisOverlays()"
+              [interactionTools]="false"
+              [selectedFeatureId]="null"
+              (overlayStateChanged)="handleOverlayStateChanged($event)"
+            />
           </div>
-          <pre><code>{{ formattedBoundary(site()!) }}</code></pre>
-        </article>
+        </section>
+
+        <section class="analysis-results" aria-label="Analysis evidence">
+          <fg-site-analysis
+            [site]="site()!"
+            (resultOverlaysChanged)="handleAnalysisOverlaysChanged($event)"
+            (resultLayerRequested)="handleResultLayerRequested($event)"
+          />
+        </section>
       </section>
+
+      <details class="boundary-record">
+        <summary>Boundary record and GeoJSON</summary>
+        <dl>
+          <div>
+            <dt>Site ID</dt>
+            <dd>
+              <code>{{ site()!.id }}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Project ID</dt>
+            <dd>
+              <code>{{ site()!.projectId }}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Geometry</dt>
+            <dd>{{ site()!.boundary.type }}</dd>
+          </div>
+          <div>
+            <dt>Rings</dt>
+            <dd>{{ site()!.boundary.coordinates.length }}</dd>
+          </div>
+        </dl>
+        <pre><code>{{ formattedBoundary(site()!) }}</code></pre>
+      </details>
     </div>
   }
 </main>

@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Eastern Hillside Demonstration Area",
+        "susceptibility": "High",
+        "notice": "Synthetic demonstration data"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[121.018,14.565],[121.037,14.565],[121.037,14.588],[121.018,14.588],[121.018,14.565]]]
+      }
+    }
+  ]
+}

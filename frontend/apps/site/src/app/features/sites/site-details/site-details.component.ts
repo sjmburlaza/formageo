@@ -2,19 +2,28 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  ViewChild,
+  computed,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { getApiErrorMessage, SitesApiService } from '@frontend/api-client';
-import { Site } from '@frontend/models';
+import { AnalysisEvidenceResult, Site } from '@frontend/models';
+import {
+  MapComponent,
+  MapFeature,
+  MapOverlay,
+  MapOverlayStateChange,
+} from '@frontend/map';
 import {
   LucideArrowLeft,
   LucideCircleAlert,
   LucideTrash2,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { SiteAnalysisComponent } from '../../analyses/site-analysis.component';
 
 @Component({
   selector: 'fg-site-details',
@@ -24,13 +33,18 @@ import { finalize } from 'rxjs';
     LucideArrowLeft,
     LucideCircleAlert,
     LucideTrash2,
+    MapComponent,
     RouterLink,
+    SiteAnalysisComponent,
   ],
   templateUrl: './site-details.component.html',
   styleUrl: './site-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SiteDetailsComponent implements OnInit {
+  @ViewChild(MapComponent)
+  private mapComponent?: MapComponent;
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly sitesApi = inject(SitesApiService);
@@ -39,6 +53,22 @@ export class SiteDetailsComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly deleting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly analysisOverlays = signal<MapOverlay[]>([]);
+  protected readonly mapFeatures = computed<MapFeature[]>(() => {
+    const site = this.site();
+    return site
+      ? [
+          {
+            id: site.id,
+            geometry: site.boundary,
+            properties: {
+              name: site.name,
+              status: site.status,
+            },
+          },
+        ]
+      : [];
+  });
 
   ngOnInit(): void {
     this.loadSite();
@@ -83,6 +113,36 @@ export class SiteDetailsComponent implements OnInit {
     return JSON.stringify(site.boundary, null, 2);
   }
 
+  protected handleAnalysisOverlaysChanged(overlays: MapOverlay[]): void {
+    this.analysisOverlays.set(overlays);
+  }
+
+  protected handleOverlayStateChanged(change: MapOverlayStateChange): void {
+    this.analysisOverlays.update((overlays) =>
+      overlays.map((overlay) =>
+        overlay.id === change.layerId
+          ? {
+              ...overlay,
+              visible: change.visible,
+              opacity: change.opacity,
+              sortOrder: change.sortOrder,
+              filter: change.filter,
+            }
+          : overlay,
+      ),
+    );
+  }
+
+  protected handleResultLayerRequested(result: AnalysisEvidenceResult): void {
+    const site = this.site();
+    if (site && result.resultGeometry) {
+      this.mapComponent?.fitToGeometry(site.boundary, {
+        padding: 80,
+        maxZoom: 16,
+      });
+    }
+  }
+
   private loadSite(): void {
     const siteId = this.route.snapshot.paramMap.get('siteId');
 
@@ -95,6 +155,7 @@ export class SiteDetailsComponent implements OnInit {
     this.loading.set(true);
     this.errorMessage.set(null);
     this.site.set(null);
+    this.analysisOverlays.set([]);
 
     this.sitesApi
       .getSite(siteId)

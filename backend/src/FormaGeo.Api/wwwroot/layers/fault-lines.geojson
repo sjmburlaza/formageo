@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Eastern Demonstration Fault Trace",
+        "status": "Illustrative",
+        "reference": "DEMO-FLT-01"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[121.030,14.535],[121.030,14.605]]
+      }
+    }
+  ]
+}

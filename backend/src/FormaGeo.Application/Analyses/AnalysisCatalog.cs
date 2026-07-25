@@ -5,7 +5,7 @@ namespace FormaGeo.Application.Analyses;
 
 public static class AnalysisCatalog
 {
-    private const string CurrentVersion = "1.0.0";
+    private const string CurrentVersion = "2.0.0";
 
     private static readonly IReadOnlyList<AnalysisDefinitionResponse>
         Definitions =
@@ -34,7 +34,16 @@ public static class AnalysisCatalog
                         false,
                         0,
                         0,
-                        100)
+                        100),
+                    new(
+                        "faultSearchDistanceMetres",
+                        "Fault proximity search distance",
+                        "Distance used to classify a mapped fault trace as nearby.",
+                        "number",
+                        false,
+                        5000,
+                        100,
+                        100000)
                 ]),
             new(
                 AnalysisType.Zoning,
@@ -51,6 +60,24 @@ public static class AnalysisCatalog
                         "boolean",
                         false,
                         true)
+                ]),
+            new(
+                AnalysisType.Terrain,
+                "Terrain",
+                "Calculates elevation, slope, steep-area percentage, and terrain coverage.",
+                ["Saved site boundary", "Terrain summary grid"],
+                "Medium",
+                CurrentVersion,
+                [
+                    new(
+                        "steepSlopeThresholdDegrees",
+                        "Steep slope threshold",
+                        "Threshold used to explain terrain classification.",
+                        "number",
+                        false,
+                        15,
+                        1,
+                        60)
                 ]),
             new(
                 AnalysisType.Accessibility,

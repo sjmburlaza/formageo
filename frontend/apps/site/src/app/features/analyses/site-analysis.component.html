@@ -1,77 +1,637 @@
 <section class="analysis-panel" aria-labelledby="analysis-title">
   <header class="analysis-heading">
     <div>
-      <p class="analysis-eyebrow">Analysis catalog</p>
-      <h3 id="analysis-title">Run spatial analysis</h3>
+      <p class="analysis-eyebrow">Site intelligence</p>
+      <h3 id="analysis-title">Analysis results</h3>
+      <p>
+        Evidence-based hazard, planning, and terrain context for
+        <strong>{{ site.name }}</strong
+        >.
+      </p>
     </div>
-    @if (runs().length > 0) {
-      <span class="run-count">{{ runs().length }}</span>
-    }
+    <button
+      class="run-assessment"
+      type="button"
+      [disabled]="
+        catalogLoading() ||
+        assessmentSubmitting() ||
+        coreRunsInProgress().length > 0
+      "
+      (click)="runCoreAssessment()"
+    >
+      <svg lucideChartNoAxesCombined aria-hidden="true"></svg>
+      {{
+        assessmentSubmitting()
+          ? 'Queuing assessment…'
+          : completedCoreCount() === 3
+            ? 'Refresh core assessment'
+            : 'Run core assessment'
+      }}
+    </button>
   </header>
 
-  <p class="analysis-intro">
-    Requests continue in the background. You can leave this site and return
-    without losing progress.
-  </p>
-
-  @if (catalogLoading()) {
-    <div class="analysis-loading" aria-live="polite">
-      <span class="spinner" aria-hidden="true"></span>
-      Loading catalog…
-    </div>
-  } @else if (catalogError()) {
+  @if (catalogError()) {
     <div class="analysis-error" role="alert">
       <svg lucideCircleAlert aria-hidden="true"></svg>
       <p>{{ catalogError() }}</p>
       <button type="button" (click)="retryCatalog()">Try again</button>
     </div>
-  } @else {
-    <div class="analysis-catalog">
-      @for (definition of catalog(); track definition.analysisType) {
-        <article
-          class="analysis-card"
-          [class.analysis-card--selected]="
-            selectedDefinition()?.analysisType === definition.analysisType
-          "
-        >
-          <div class="analysis-card__heading">
-            <span class="analysis-card__icon" aria-hidden="true">
-              <svg lucideChartNoAxesCombined></svg>
-            </span>
+  }
+
+  @if (requestError()) {
+    <div class="analysis-error" role="alert">
+      <svg lucideCircleAlert aria-hidden="true"></svg>
+      <p>{{ requestError() }}</p>
+      <button type="button" (click)="requestError.set(null)">Dismiss</button>
+    </div>
+  }
+
+  @if (coreRunsInProgress().length > 0) {
+    <div class="assessment-progress" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <div>
+        <strong>Core assessment in progress</strong>
+        <span>
+          {{ coreRunsInProgress().length }}
+          {{
+            coreRunsInProgress().length === 1 ? 'analysis is' : 'analyses are'
+          }}
+          being processed. Results will appear automatically.
+        </span>
+      </div>
+    </div>
+  }
+
+  <nav class="result-tabs" aria-label="Analysis result sections">
+    @for (tab of tabs; track tab.id) {
+      <button
+        type="button"
+        role="tab"
+        [class.result-tab--active]="activeTab() === tab.id"
+        [attr.aria-selected]="activeTab() === tab.id"
+        (click)="selectTab(tab.id)"
+      >
+        {{ tab.label }}
+        @if (tab.id === 'hazards' && evidenceFor('Hazards').length > 0) {
+          <span>{{ evidenceFor('Hazards').length }}</span>
+        } @else if (
+          tab.id === 'planning' && evidenceFor('Planning').length > 0
+        ) {
+          <span>{{ evidenceFor('Planning').length }}</span>
+        } @else if (tab.id === 'sources' && sources().length > 0) {
+          <span>{{ sources().length }}</span>
+        }
+      </button>
+    }
+  </nav>
+
+  <div class="result-content" role="tabpanel">
+    @if (historyLoading()) {
+      <div class="analysis-loading" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        Loading analysis evidence…
+      </div>
+    } @else if (historyError()) {
+      <div class="analysis-error" role="alert">
+        <svg lucideCircleAlert aria-hidden="true"></svg>
+        <p>{{ historyError() }}</p>
+        <button type="button" (click)="retryHistory()">Try again</button>
+      </div>
+    } @else if (activeTab() === 'overview') {
+      @if (completedCoreCount() === 0) {
+        <section class="analysis-empty">
+          <span aria-hidden="true"><svg lucideLayers3></svg></span>
+          <h4>No core assessment results yet</h4>
+          <p>
+            Run the core assessment to check five hazard and environmental
+            conditions, planning context, and terrain statistics.
+          </p>
+          <button type="button" (click)="runCoreAssessment()">
+            Run core assessment
+          </button>
+        </section>
+      } @else {
+        @if (notableEvidence().length > 0) {
+          <div class="warning-banner" role="alert">
+            <svg lucideCircleAlert aria-hidden="true"></svg>
             <div>
-              <h4>{{ definition.name }}</h4>
-              <span>{{ definition.estimatedComplexity }} complexity</span>
+              <strong>
+                {{ notableEvidence().length }} notable mapped
+                {{
+                  notableEvidence().length === 1 ? 'condition' : 'conditions'
+                }}
+              </strong>
+              <p>
+                Review the labeled results below. Mapped exposure is screening
+                evidence, not a permit or site-safety determination.
+              </p>
             </div>
-            @if (latestRun(definition.analysisType); as latest) {
-              <button
-                class="analysis-status"
-                type="button"
-                [class]="statusClass(latest.status)"
-                (click)="selectRun(latest)"
-              >
-                {{ latest.status }}
+          </div>
+        }
+
+        <div class="overview-grid">
+          @if (latestRun('HazardExposure', 'Completed'); as run) {
+            <article>
+              <span>Hazards</span>
+              <strong>{{ run.result?.classification }}</strong>
+              <p>{{ run.result?.summary }}</p>
+              <button type="button" (click)="selectTab('hazards')">
+                Review {{ evidenceFor('Hazards').length }} checks
               </button>
-            }
+            </article>
+          } @else {
+            <article class="overview-card--missing">
+              <span>Hazards</span>
+              <strong>Not analyzed</strong>
+              <p>Hazard exposure and fault proximity have not been checked.</p>
+            </article>
+          }
+
+          @if (latestRun('Zoning', 'Completed'); as run) {
+            <article>
+              <span>Planning</span>
+              <strong>{{ run.result?.classification }}</strong>
+              <p>{{ run.result?.summary }}</p>
+              <button type="button" (click)="selectTab('planning')">
+                Review planning evidence
+              </button>
+            </article>
+          } @else {
+            <article class="overview-card--missing">
+              <span>Planning</span>
+              <strong>Not analyzed</strong>
+              <p>
+                Zoning, jurisdiction, and restrictions have not been checked.
+              </p>
+            </article>
+          }
+
+          @if (latestRun('Terrain', 'Completed'); as run) {
+            <article>
+              <span>Terrain</span>
+              <strong>{{ run.result?.classification }}</strong>
+              <p>{{ run.result?.summary }}</p>
+              <button type="button" (click)="selectTab('terrain')">
+                Review terrain metrics
+              </button>
+            </article>
+          } @else {
+            <article class="overview-card--missing">
+              <span>Terrain</span>
+              <strong>Not analyzed</strong>
+              <p>Elevation and slope statistics have not been calculated.</p>
+            </article>
+          }
+        </div>
+
+        <section class="calculation-summary">
+          <div>
+            <p class="analysis-eyebrow">How this was calculated</p>
+            <h4>Measured intersections, not simple pass/fail flags</h4>
           </div>
-          <p>{{ definition.description }}</p>
-          <div class="analysis-requirements">
-            <strong>Uses</strong>
-            <span>{{ definition.requiredInputs.join(' · ') }}</span>
-          </div>
-          <footer>
-            <span>v{{ definition.analysisVersion }}</span>
+          <p>
+            Source features are clipped to the saved site boundary. Areas use
+            the site's local UTM projection, percentages use total site area,
+            and every output preserves the result geometry and source version.
+          </p>
+          <button type="button" (click)="selectTab('sources')">
+            <svg lucideInfo aria-hidden="true"></svg>
+            Review sources and limitations
+          </button>
+        </section>
+      }
+    } @else if (activeTab() === 'hazards') {
+      @if (evidenceFor('Hazards').length === 0) {
+        <section class="analysis-empty analysis-empty--compact">
+          <h4>Hazard evidence is not available</h4>
+          <p>Run the core assessment to calculate mapped exposures.</p>
+        </section>
+      } @else {
+        <div class="result-card-list">
+          @for (result of evidenceFor('Hazards'); track result.id) {
+            <article class="evidence-card">
+              <header>
+                <span class="evidence-icon" aria-hidden="true">
+                  @if (
+                    result.severity === 'None' ||
+                    result.severity === 'Informational'
+                  ) {
+                    <svg lucideCircleCheck></svg>
+                  } @else {
+                    <svg lucideCircleAlert></svg>
+                  }
+                </span>
+                <div>
+                  <p>Hazard result</p>
+                  <h4>{{ result.name }}</h4>
+                </div>
+                <span class="severity" [class]="severityClass(result.severity)">
+                  @if (
+                    result.severity === 'None' ||
+                    result.severity === 'Informational'
+                  ) {
+                    <svg lucideCircleCheck aria-hidden="true"></svg>
+                  } @else {
+                    <svg lucideCircleAlert aria-hidden="true"></svg>
+                  }
+                  {{ result.severity }}
+                </span>
+              </header>
+
+              <p class="evidence-summary">{{ result.summary }}</p>
+
+              <dl class="evidence-stats">
+                <div>
+                  <dt>Site affected</dt>
+                  <dd>{{ affectedPercent(result) }}</dd>
+                </div>
+                <div>
+                  <dt>Affected area</dt>
+                  <dd>{{ affectedArea(result) }}</dd>
+                </div>
+                <div>
+                  <dt>Classification</dt>
+                  <dd>{{ result.classification }}</dd>
+                </div>
+              </dl>
+
+              <div class="evidence-source">
+                <span>
+                  Source
+                  <strong>{{ result.source.dataset }}</strong>
+                  <small>Version {{ result.dataVersion }}</small>
+                </span>
+                <button type="button" (click)="showSource(result.source.id)">
+                  Source details
+                </button>
+              </div>
+
+              <div class="evidence-actions">
+                <button
+                  class="map-action"
+                  type="button"
+                  [disabled]="!result.resultGeometry"
+                  [attr.aria-pressed]="layerVisible(result)"
+                  (click)="toggleEvidenceLayer(result)"
+                >
+                  @if (layerVisible(result)) {
+                    <svg lucideEyeOff aria-hidden="true"></svg>
+                    Hide from map
+                  } @else {
+                    <svg lucideMapPinned aria-hidden="true"></svg>
+                    View on map
+                  }
+                </button>
+                <details>
+                  <summary>Calculation and limitations</summary>
+                  <strong>Method</strong>
+                  <p>{{ result.methodology }}</p>
+                  <strong>Limitations</strong>
+                  @for (limitation of result.limitations; track limitation) {
+                    <p>{{ limitation }}</p>
+                  }
+                </details>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    } @else if (activeTab() === 'planning') {
+      @if (evidenceFor('Planning').length === 0) {
+        <section class="analysis-empty analysis-empty--compact">
+          <h4>Planning evidence is not available</h4>
+          <p>Run the core assessment to calculate planning intersections.</p>
+        </section>
+      } @else {
+        <div class="result-card-list">
+          @for (result of evidenceFor('Planning'); track result.id) {
+            <article class="evidence-card evidence-card--planning">
+              <header>
+                <span class="evidence-icon" aria-hidden="true">
+                  <svg lucideMapPinned></svg>
+                </span>
+                <div>
+                  <p>Planning result</p>
+                  <h4>{{ result.name }}</h4>
+                </div>
+                <span class="severity" [class]="severityClass(result.severity)">
+                  @if (
+                    result.severity === 'None' ||
+                    result.severity === 'Informational'
+                  ) {
+                    <svg lucideCircleCheck aria-hidden="true"></svg>
+                  } @else {
+                    <svg lucideCircleAlert aria-hidden="true"></svg>
+                  }
+                  {{ result.severity }}
+                </span>
+              </header>
+
+              <p class="evidence-summary">{{ result.summary }}</p>
+
+              <dl class="evidence-stats">
+                <div>
+                  <dt>Site covered</dt>
+                  <dd>{{ affectedPercent(result) }}</dd>
+                </div>
+                <div>
+                  <dt>Intersection area</dt>
+                  <dd>{{ affectedArea(result) }}</dd>
+                </div>
+                <div>
+                  <dt>Classification</dt>
+                  <dd>{{ result.classification }}</dd>
+                </div>
+              </dl>
+
+              @if (intersections(result).length > 0) {
+                <div class="evidence-table-wrap">
+                  <table>
+                    <caption>
+                      Intersecting mapped features
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Feature</th>
+                        <th scope="col">Classification</th>
+                        <th scope="col">Site %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (
+                        intersection of intersections(result);
+                        track intersectionValue(intersection, 'name')
+                      ) {
+                        <tr>
+                          <td>{{ intersectionValue(intersection, 'name') }}</td>
+                          <td>
+                            {{
+                              intersectionValue(intersection, 'classification')
+                            }}
+                          </td>
+                          <td>
+                            {{
+                              intersectionValue(intersection, 'sitePercent')
+                            }}%
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+
+              <div class="evidence-source">
+                <span>
+                  Source
+                  <strong>{{ result.source.dataset }}</strong>
+                  <small>Version {{ result.dataVersion }}</small>
+                </span>
+                <button type="button" (click)="showSource(result.source.id)">
+                  Source details
+                </button>
+              </div>
+
+              <div class="evidence-actions">
+                <button
+                  class="map-action"
+                  type="button"
+                  [disabled]="!result.resultGeometry"
+                  [attr.aria-pressed]="layerVisible(result)"
+                  (click)="toggleEvidenceLayer(result)"
+                >
+                  @if (layerVisible(result)) {
+                    <svg lucideEyeOff aria-hidden="true"></svg>
+                    Hide from map
+                  } @else {
+                    <svg lucideMapPinned aria-hidden="true"></svg>
+                    View on map
+                  }
+                </button>
+                <details>
+                  <summary>Calculation and limitations</summary>
+                  <strong>Method</strong>
+                  <p>{{ result.methodology }}</p>
+                  <strong>Limitations</strong>
+                  @for (limitation of result.limitations; track limitation) {
+                    <p>{{ limitation }}</p>
+                  }
+                </details>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    } @else if (activeTab() === 'terrain') {
+      @if (evidenceFor('Terrain').length === 0) {
+        <section class="analysis-empty analysis-empty--compact">
+          <h4>Terrain evidence is not available</h4>
+          <p>Run the core assessment to calculate elevation and slope.</p>
+        </section>
+      } @else {
+        <div class="terrain-metrics">
+          <article>
+            <span>Minimum elevation</span>
+            <strong>
+              {{ metric(terrainMetrics(), 'minimumElevationMetres') }} m
+            </strong>
+          </article>
+          <article>
+            <span>Maximum elevation</span>
+            <strong>
+              {{ metric(terrainMetrics(), 'maximumElevationMetres') }} m
+            </strong>
+          </article>
+          <article>
+            <span>Average elevation</span>
+            <strong>
+              {{ metric(terrainMetrics(), 'averageElevationMetres') }} m
+            </strong>
+          </article>
+          <article>
+            <span>Average slope</span>
+            <strong>
+              {{ metric(terrainMetrics(), 'averageSlopeDegrees') }}°
+            </strong>
+          </article>
+          <article>
+            <span>Steep-area percentage</span>
+            <strong>
+              {{ metric(terrainMetrics(), 'steepAreaPercent') }}%
+            </strong>
+          </article>
+          <article>
+            <span>Terrain coverage</span>
+            <strong>
+              {{ metric(terrainMetrics(), 'coveragePercent') }}%
+            </strong>
+          </article>
+        </div>
+
+        @for (result of evidenceFor('Terrain'); track result.id) {
+          <article class="evidence-card evidence-card--terrain">
+            <header>
+              <span class="evidence-icon" aria-hidden="true">
+                <svg lucideChartNoAxesCombined></svg>
+              </span>
+              <div>
+                <p>Terrain result</p>
+                <h4>{{ result.classification }}</h4>
+              </div>
+              <span class="severity" [class]="severityClass(result.severity)">
+                <svg lucideCircleAlert aria-hidden="true"></svg>
+                {{ result.severity }}
+              </span>
+            </header>
+            <p class="evidence-summary">{{ result.summary }}</p>
+            <div class="method-panel">
+              <strong>How the terrain statistics were calculated</strong>
+              <p>{{ result.methodology }}</p>
+            </div>
+            <div class="evidence-source">
+              <span>
+                Source
+                <strong>{{ result.source.dataset }}</strong>
+                <small>Version {{ result.dataVersion }}</small>
+              </span>
+              <button type="button" (click)="showSource(result.source.id)">
+                Source details
+              </button>
+            </div>
+            <div class="evidence-actions">
+              <button
+                class="map-action"
+                type="button"
+                [attr.aria-pressed]="layerVisible(result)"
+                (click)="toggleEvidenceLayer(result)"
+              >
+                @if (layerVisible(result)) {
+                  <svg lucideEyeOff aria-hidden="true"></svg>
+                  Hide terrain cells
+                } @else {
+                  <svg lucideMapPinned aria-hidden="true"></svg>
+                  View terrain cells
+                }
+              </button>
+            </div>
+            <div class="limitations-panel" role="note">
+              <svg lucideInfo aria-hidden="true"></svg>
+              <div>
+                <strong>Limitations</strong>
+                @for (limitation of result.limitations; track limitation) {
+                  <p>{{ limitation }}</p>
+                }
+              </div>
+            </div>
+          </article>
+        }
+      }
+    } @else {
+      @if (sources().length === 0) {
+        <section class="analysis-empty analysis-empty--compact">
+          <h4>No source metadata yet</h4>
+          <p>Source records will appear with completed core results.</p>
+        </section>
+      } @else {
+        <div class="source-list">
+          @for (source of sources(); track source.id) {
+            <article
+              [id]="'analysis-source-' + source.id"
+              [class.source-card--selected]="selectedSourceId() === source.id"
+            >
+              <header>
+                <span aria-hidden="true"><svg lucideInfo></svg></span>
+                <div>
+                  <p>{{ source.organization }}</p>
+                  <h4>{{ source.dataset }}</h4>
+                </div>
+                <span>v{{ source.dataVersion }}</span>
+              </header>
+              <dl>
+                <div>
+                  <dt>Published</dt>
+                  <dd>{{ source.publishedDate }}</dd>
+                </div>
+                <div>
+                  <dt>Coordinate system</dt>
+                  <dd>{{ source.coordinateSystem }}</dd>
+                </div>
+                <div>
+                  <dt>License</dt>
+                  <dd>{{ source.license }}</dd>
+                </div>
+                <div>
+                  <dt>Dataset path</dt>
+                  <dd>
+                    <code>{{ source.sourceUrl }}</code>
+                  </dd>
+                </div>
+              </dl>
+              <div>
+                <strong>Used by</strong>
+                @for (result of sourceResults(source.id); track result.id) {
+                  <span>{{ result.name }}</span>
+                }
+              </div>
+              <section>
+                <strong>Known limitations</strong>
+                @for (result of sourceResults(source.id); track result.id) {
+                  @for (limitation of result.limitations; track limitation) {
+                    <p>{{ limitation }}</p>
+                  }
+                }
+              </section>
+            </article>
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <details class="analysis-tools">
+    <summary>
+      <span>
+        <svg lucideChartNoAxesCombined aria-hidden="true"></svg>
+        Run an individual analysis
+      </span>
+      <small>{{ catalog().length }} available</small>
+    </summary>
+
+    @if (catalogLoading()) {
+      <div class="analysis-loading" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        Loading catalog…
+      </div>
+    } @else {
+      <div class="analysis-catalog">
+        @for (definition of catalog(); track definition.analysisType) {
+          <article
+            class="analysis-card"
+            [class.analysis-card--selected]="
+              selectedDefinition()?.analysisType === definition.analysisType
+            "
+          >
+            <div>
+              <span class="analysis-card__icon" aria-hidden="true">
+                <svg lucideChartNoAxesCombined></svg>
+              </span>
+              <span>
+                <strong>{{ definition.name }}</strong>
+                <small>{{ definition.description }}</small>
+              </span>
+            </div>
             <button
               type="button"
               [disabled]="submittingType() !== null"
               (click)="openRequestForm(definition)"
             >
-              Run analysis
+              Run
             </button>
-          </footer>
-        </article>
-      }
-    </div>
-  }
+          </article>
+        }
+      </div>
+    }
+  </details>
 
   @if (selectedDefinition(); as definition) {
     <section
@@ -138,10 +698,6 @@
         </p>
       }
 
-      @if (requestError()) {
-        <p class="request-error" role="alert">{{ requestError() }}</p>
-      }
-
       <button
         class="submit-analysis"
         type="button"
@@ -157,66 +713,43 @@
     </section>
   }
 
-  @if (requestError() && !selectedDefinition()) {
-    <div class="analysis-error" role="alert">
-      <svg lucideCircleAlert aria-hidden="true"></svg>
-      <p>{{ requestError() }}</p>
-      <button type="button" (click)="requestError.set(null)">Dismiss</button>
-    </div>
-  }
+  <details class="analysis-activity">
+    <summary>
+      <span>
+        <svg lucideHistory aria-hidden="true"></svg>
+        Analysis activity
+      </span>
+      <small>{{ runs().length }} runs</small>
+    </summary>
 
-  @if (selectedRun(); as run) {
-    <section
-      class="status-panel"
-      [class]="statusClass(run.status)"
-      aria-labelledby="analysis-status-title"
-    >
-      <header>
-        <span class="status-symbol" aria-hidden="true">
-          @if (run.status === 'Completed') {
-            <svg lucideCircleCheck></svg>
-          } @else if (run.status === 'Failed') {
-            <svg lucideCircleAlert></svg>
-          } @else if (run.status === 'Cancelled') {
-            <svg lucideX></svg>
-          } @else {
-            <svg lucideClock3></svg>
-          }
-        </span>
-        <div>
-          <span>{{ definitionName(run.analysisType) }}</span>
-          <h4 id="analysis-status-title">{{ run.status }}</h4>
-        </div>
-        <small>v{{ run.analysisVersion }}</small>
-      </header>
-
-      @if (run.status === 'Pending' || run.status === 'Running') {
-        <div
-          class="analysis-progress"
-          role="progressbar"
-          [attr.aria-label]="run.status + ' analysis'"
-        >
-          <i></i>
-        </div>
-      }
-
-      <p class="status-message">{{ statusMessage(run) }}</p>
-
-      @if (run.status === 'Completed' && run.result) {
-        <p class="result-summary">
-          {{ run.result.summary || 'Analysis completed.' }}
-        </p>
-        @if (resultMetrics(run).length > 0) {
-          <dl class="result-metrics">
-            @for (metric of resultMetrics(run); track metric[0]) {
-              <div>
-                <dt>{{ metricLabel(metric[0]) }}</dt>
-                <dd>{{ metricValue(metric[1]) }}</dd>
-              </div>
+    @if (selectedRun(); as run) {
+      <section
+        class="status-panel"
+        [class]="statusClass(run.status)"
+        aria-labelledby="analysis-status-title"
+      >
+        <header>
+          <span class="status-symbol" aria-hidden="true">
+            @if (run.status === 'Completed') {
+              <svg lucideCircleCheck></svg>
+            } @else if (run.status === 'Failed') {
+              <svg lucideCircleAlert></svg>
+            } @else if (run.status === 'Cancelled') {
+              <svg lucideX></svg>
+            } @else {
+              <svg lucideClock3></svg>
             }
-          </dl>
-        }
-        @if (run.result.resultGeometry) {
+          </span>
+          <div>
+            <span>{{ definitionName(run.analysisType) }}</span>
+            <h4 id="analysis-status-title">{{ run.status }}</h4>
+          </div>
+          <small>v{{ run.analysisVersion }}</small>
+        </header>
+
+        <p class="status-message">{{ statusMessage(run) }}</p>
+
+        @if (run.status === 'Completed' && run.result?.resultGeometry) {
           <button
             class="result-download"
             type="button"
@@ -226,84 +759,52 @@
             Download result GeoJSON
           </button>
         }
-      }
 
-      @if (run.status === 'Failed') {
-        <div class="failure-reason" role="alert">
-          <strong>Failure reason</strong>
-          <p>
-            {{
-              run.errorMessage ||
-                'No diagnostic message was returned. Retry the analysis.'
-            }}
-          </p>
-        </div>
-      }
-
-      <footer>
-        <span>
-          Requested {{ run.requestedAtUtc | date: 'medium' }}
-        </span>
-        <div>
-          @if (canCancel(run)) {
-            <button
-              class="status-action status-action--cancel"
-              type="button"
-              [disabled]="cancellingId() === run.id"
-              (click)="cancelRun(run)"
-            >
+        @if (run.status === 'Failed') {
+          <div class="failure-reason" role="alert">
+            <strong>Failure reason</strong>
+            <p>
               {{
-                cancellingId() === run.id ? 'Cancelling…' : 'Cancel'
+                run.errorMessage ||
+                  'No diagnostic message was returned. Retry the analysis.'
               }}
-            </button>
-          }
-          @if (run.status === 'Failed' || run.status === 'Cancelled') {
-            <button
-              class="status-action"
-              type="button"
-              [disabled]="submittingType() !== null"
-              (click)="retryRun(run)"
-            >
-              <svg lucideRotateCcw aria-hidden="true"></svg>
-              {{
-                submittingType() === run.analysisType
-                  ? 'Retrying…'
-                  : 'Retry'
-              }}
-            </button>
-          }
-        </div>
-      </footer>
-    </section>
-  }
+            </p>
+          </div>
+        }
 
-  <section class="analysis-history" aria-labelledby="analysis-history-title">
-    <header>
-      <div>
-        <svg lucideHistory aria-hidden="true"></svg>
-        <h4 id="analysis-history-title">Previous analyses</h4>
-      </div>
-      @if (runs().length > 0) {
-        <span>{{ runs().length }} total</span>
-      }
-    </header>
+        <footer>
+          <span>Requested {{ run.requestedAtUtc | date: 'medium' }}</span>
+          <div>
+            @if (canCancel(run)) {
+              <button
+                class="status-action status-action--cancel"
+                type="button"
+                [disabled]="cancellingId() === run.id"
+                (click)="cancelRun(run)"
+              >
+                {{ cancellingId() === run.id ? 'Cancelling…' : 'Cancel' }}
+              </button>
+            }
+            @if (run.status === 'Failed' || run.status === 'Cancelled') {
+              <button
+                class="status-action"
+                type="button"
+                [disabled]="submittingType() !== null"
+                (click)="retryRun(run)"
+              >
+                <svg lucideRotateCcw aria-hidden="true"></svg>
+                Retry
+              </button>
+            }
+          </div>
+        </footer>
+      </section>
+    }
 
-    @if (historyLoading()) {
-      <div class="analysis-loading" aria-live="polite">
-        <span class="spinner" aria-hidden="true"></span>
-        Loading history…
-      </div>
-    } @else if (historyError()) {
-      <div class="analysis-error" role="alert">
-        <p>{{ historyError() }}</p>
-        <button type="button" (click)="retryHistory()">Try again</button>
-      </div>
-    } @else if (runs().length === 0) {
-      <p class="history-empty">
-        No previous analyses. Choose a catalog card to create the first run.
-      </p>
+    @if (runs().length === 0) {
+      <p class="history-empty">No analysis runs have been requested.</p>
     } @else {
-      <ol>
+      <ol class="history-list">
         @for (run of runs(); track run.id) {
           <li>
             <button
@@ -315,8 +816,7 @@
               <span>
                 <strong>{{ definitionName(run.analysisType) }}</strong>
                 <small>
-                  {{ run.requestedAtUtc | date: 'medium' }} ·
-                  {{ run.status }}
+                  {{ run.requestedAtUtc | date: 'medium' }} · {{ run.status }}
                 </small>
               </span>
               <em>v{{ run.analysisVersion }}</em>
@@ -325,5 +825,5 @@
         }
       </ol>
     }
-  </section>
+  </details>
 </section>

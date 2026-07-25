@@ -13,6 +13,7 @@ import {
 import type {
   Feature,
   FeatureCollection,
+  GeoJSON,
   GeoJsonProperties,
   LineString,
   Point,
@@ -126,8 +127,9 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   protected readonly activeBaseMap = signal('light');
   protected readonly mapReady = signal(false);
   protected readonly overlaySignal = signal<MapOverlay[]>([]);
-  protected readonly identifiedFeature =
-    signal<MapIdentifiedFeature | null>(null);
+  protected readonly identifiedFeature = signal<MapIdentifiedFeature | null>(
+    null,
+  );
   protected readonly baseMaps: BaseMapDefinition[] = [
     { id: 'light', label: 'Light' },
     { id: 'streets', label: 'Streets' },
@@ -144,6 +146,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   readonly baseMapChanged = output<string>();
 
   @Input() workerUrl = '/assets/maplibre/maplibre-gl-worker.mjs';
+  @Input() interactionTools = true;
 
   @Input()
   set features(value: MapFeature[] | null | undefined) {
@@ -311,9 +314,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.baseMapChanged.emit(baseMapId);
   }
 
-  protected handleOverlayStateChange(
-    change: MapOverlayStateChange,
-  ): void {
+  protected handleOverlayStateChange(change: MapOverlayStateChange): void {
     this.mapOverlays = this.mapOverlays.map((overlay) =>
       overlay.id === change.layerId
         ? {
@@ -648,7 +649,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       if (overlay.deliveryMethod === 'GeoJson') {
         this.map.addSource(sourceId, {
           type: 'geojson',
-          data: overlay.dataUrl,
+          data: (overlay.data ?? overlay.dataUrl) as string | GeoJSON,
           attribution: overlay.dataSource.attribution,
         });
       } else if (overlay.deliveryMethod === 'VectorTiles') {
@@ -674,7 +675,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     const layerIds = this.getOverlayLayerIds(overlay);
     const sourceLayer =
       overlay.deliveryMethod === 'VectorTiles'
-        ? overlay.sourceLayer ?? undefined
+        ? (overlay.sourceLayer ?? undefined)
         : undefined;
 
     if (overlay.geometryType === 'Polygon') {
@@ -702,7 +703,9 @@ export class MapComponent implements AfterViewInit, OnDestroy {
             'source-layer': sourceLayer,
             paint: {
               'line-color':
-                overlay.style.strokeColor ?? overlay.style.fillColor ?? '#334155',
+                overlay.style.strokeColor ??
+                overlay.style.fillColor ??
+                '#334155',
               'line-width': overlay.style.strokeWidth ?? 1.5,
             },
           },
@@ -719,7 +722,9 @@ export class MapComponent implements AfterViewInit, OnDestroy {
             'source-layer': sourceLayer,
             paint: {
               'line-color':
-                overlay.style.lineColor ?? overlay.style.strokeColor ?? '#334155',
+                overlay.style.lineColor ??
+                overlay.style.strokeColor ??
+                '#334155',
               'line-width':
                 overlay.style.lineWidth ?? overlay.style.strokeWidth ?? 2,
             },
@@ -738,8 +743,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
             paint: {
               'circle-color': overlay.style.circleColor ?? '#7c3aed',
               'circle-radius': overlay.style.circleRadius ?? 6,
-              'circle-stroke-color':
-                overlay.style.strokeColor ?? '#ffffff',
+              'circle-stroke-color': overlay.style.strokeColor ?? '#ffffff',
               'circle-stroke-width': overlay.style.strokeWidth ?? 1.5,
             },
           },
@@ -803,8 +807,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const [primaryLayerId, outlineLayerId] =
-      this.getOverlayLayerIds(overlay);
+    const [primaryLayerId, outlineLayerId] = this.getOverlayLayerIds(overlay);
     const opacity = Math.min(1, Math.max(0, overlay.opacity));
 
     if (overlay.geometryType === 'Polygon') {
@@ -817,35 +820,19 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       }
 
       if (outlineLayerId && this.map.getLayer(outlineLayerId)) {
-        this.map.setPaintProperty(
-          outlineLayerId,
-          'line-opacity',
-          opacity,
-        );
+        this.map.setPaintProperty(outlineLayerId, 'line-opacity', opacity);
       }
     } else if (overlay.geometryType === 'LineString') {
-      this.map.setPaintProperty(
-        primaryLayerId,
-        'line-opacity',
-        opacity,
-      );
+      this.map.setPaintProperty(primaryLayerId, 'line-opacity', opacity);
     } else if (overlay.geometryType === 'Point') {
-      this.map.setPaintProperty(
-        primaryLayerId,
-        'circle-opacity',
-        opacity,
-      );
+      this.map.setPaintProperty(primaryLayerId, 'circle-opacity', opacity);
       this.map.setPaintProperty(
         primaryLayerId,
         'circle-stroke-opacity',
         opacity,
       );
     } else {
-      this.map.setPaintProperty(
-        primaryLayerId,
-        'raster-opacity',
-        opacity,
-      );
+      this.map.setPaintProperty(primaryLayerId, 'raster-opacity', opacity);
     }
 
     if (overlay.geometryType !== 'Raster') {
@@ -859,9 +846,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private createOverlayFilter(
-    overlay: MapOverlay,
-  ): FilterSpecification | null {
+  private createOverlayFilter(overlay: MapOverlay): FilterSpecification | null {
     if (!overlay.filter) {
       return null;
     }
@@ -871,13 +856,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       [
         'index-of',
         overlay.filter.toLocaleLowerCase(),
-        [
-          'downcase',
-          [
-            'to-string',
-            ['get', overlay.featureNameProperty],
-          ],
-        ],
+        ['downcase', ['to-string', ['get', overlay.featureNameProperty]]],
       ],
       0,
     ] as FilterSpecification;
