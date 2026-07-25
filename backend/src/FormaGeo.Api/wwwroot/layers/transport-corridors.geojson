@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "East–West Demonstration Corridor",
+        "mode": "Road",
+        "classification": "Primary"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[120.974,14.572],[121.002,14.576],[121.028,14.568],[121.064,14.575]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North–South Demonstration Corridor",
+        "mode": "Transit",
+        "classification": "Primary"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[121.019,14.532],[121.021,14.564],[121.027,14.603],[121.032,14.632]]
+      }
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects;
 using FormaGeo.Application.Sites;
 using FormaGeo.Application.Sites.Summaries;
@@ -34,6 +35,10 @@ public static class DependencyInjection
         services.AddScoped<
             IProjectRepository,
             ProjectRepository>();
+
+        services.AddScoped<
+            ILayerCatalogRepository,
+            LayerCatalogRepository>();
 
         services.AddScoped<
             ISiteRepository,

@@ -1,3 +1,4 @@
+using FormaGeo.Domain.Layers;
 using FormaGeo.Domain.Projects;
 using FormaGeo.Domain.Sites;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,17 @@ public sealed class FormaGeoDbContext : DbContext
     public DbSet<Project> Projects => Set<Project>();
 
     public DbSet<Site> Sites => Set<Site>();
+
+    public DbSet<DataSource> DataSources => Set<DataSource>();
+
+    public DbSet<LayerDefinition> LayerDefinitions =>
+        Set<LayerDefinition>();
+
+    public DbSet<LayerVersion> LayerVersions => Set<LayerVersion>();
+
+    public DbSet<ProjectLayer> ProjectLayers => Set<ProjectLayer>();
+
+    public DbSet<LayerLegend> LayerLegends => Set<LayerLegend>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)

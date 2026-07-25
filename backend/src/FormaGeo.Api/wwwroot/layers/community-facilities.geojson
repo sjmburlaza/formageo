@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Demonstration Health Center",
+        "facilityType": "Health",
+        "operator": "Sample operator"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [121.014,14.589]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Demonstration School",
+        "facilityType": "Education",
+        "operator": "Sample operator"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [121.038,14.566]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Demonstration Community Hall",
+        "facilityType": "Civic",
+        "operator": "Sample operator"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [120.992,14.598]
+      }
+    }
+  ]
+}

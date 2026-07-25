@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Demonstration District",
+        "classification": "Administrative planning area",
+        "reference": "DEMO-BND-01"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[120.981,14.583],[121.035,14.583],[121.035,14.628],[120.981,14.628],[120.981,14.583]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "South Demonstration District",
+        "classification": "Administrative planning area",
+        "reference": "DEMO-BND-02"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[120.981,14.535],[121.035,14.535],[121.035,14.58],[120.981,14.58],[120.981,14.535]]]
+      }
+    }
+  ]
+}

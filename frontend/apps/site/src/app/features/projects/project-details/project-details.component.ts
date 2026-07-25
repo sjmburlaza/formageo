@@ -20,6 +20,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   getApiErrorMessage,
+  LayersApiService,
   ProjectsApiService,
   SitesApiService,
 } from '@frontend/api-client';
@@ -29,8 +30,17 @@ import {
   MapFeatureSelectionEvent,
   MapGeometryEvent,
   MapInteractionMode,
+  MapOverlay,
+  MapOverlayStateChange,
 } from '@frontend/map';
-import { GeoJsonPolygon, Project, Site, SiteSummary } from '@frontend/models';
+import {
+  GeoJsonPolygon,
+  LayerDefinition,
+  Project,
+  ProjectLayerPreference,
+  Site,
+  SiteSummary,
+} from '@frontend/models';
 import {
   LucideArrowLeft,
   LucideArrowRight,
@@ -97,10 +107,13 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectsApi = inject(ProjectsApiService);
   private readonly sitesApi = inject(SitesApiService);
+  private readonly layersApi = inject(LayersApiService);
   private summaryRequestSequence = 0;
+  private layerPreferencesSaveTimer?: ReturnType<typeof setTimeout>;
 
   protected readonly project = signal<Project | null>(null);
   protected readonly sites = signal<Site[]>([]);
+  protected readonly layerOverlays = signal<MapOverlay[]>([]);
   protected readonly selectedSiteId = signal<string | null>(null);
   protected readonly selectedSite = computed(
     () =>
@@ -184,6 +197,12 @@ export class ProjectDetailsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => {
+      if (this.layerPreferencesSaveTimer) {
+        clearTimeout(this.layerPreferencesSaveTimer);
+      }
+    });
+
     this.route.paramMap
       .pipe(
         map((params) => params.get('projectId') ?? ''),
@@ -435,6 +454,25 @@ export class ProjectDetailsComponent implements OnInit {
 
     this.editingSiteId.set(site.id);
     this.activeInspectorTab.set('boundary');
+  }
+
+  protected handleOverlayStateChanged(
+    change: MapOverlayStateChange,
+  ): void {
+    this.layerOverlays.update((overlays) =>
+      overlays.map((overlay) =>
+        overlay.id === change.layerId
+          ? {
+              ...overlay,
+              visible: change.visible,
+              opacity: change.opacity,
+              sortOrder: change.sortOrder,
+              filter: change.filter,
+            }
+          : overlay,
+      ),
+    );
+    this.scheduleLayerPreferenceSave();
   }
 
   protected selectInspectorTab(tab: InspectorTab): void {
@@ -729,6 +767,7 @@ export class ProjectDetailsComponent implements OnInit {
     this.errorMessage.set(null);
     this.project.set(null);
     this.sites.set([]);
+    this.layerOverlays.set([]);
     this.selectedSiteId.set(null);
     this.siteSummary.set(null);
     this.summaryLoading.set(false);
@@ -740,12 +779,18 @@ export class ProjectDetailsComponent implements OnInit {
     forkJoin({
       project: this.projectsApi.getProject(projectId),
       sites: this.sitesApi.getProjectSites(projectId),
+      layers: this.layersApi.getLayers(),
+      projectLayers: this.layersApi.getProjectLayers(projectId),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ project, sites }) => {
+        next: ({ project, sites, layers, projectLayers }) => {
           this.project.set(project);
           this.sites.set(sites);
+          this.layerOverlays.set(
+            this.createMapOverlays(layers, projectLayers),
+          );
+          this.loadLayerLegends(layers);
         },
         error: (error: unknown) => {
           this.errorMessage.set(
@@ -836,5 +881,118 @@ export class ProjectDetailsComponent implements OnInit {
         ring.map(([longitude, latitude]) => [longitude, latitude]),
       ),
     };
+  }
+
+  private createMapOverlays(
+    layers: LayerDefinition[],
+    preferences: ProjectLayerPreference[],
+  ): MapOverlay[] {
+    const preferencesByLayerId = new Map(
+      preferences.map((preference) => [
+        preference.layerId,
+        preference,
+      ]),
+    );
+
+    return layers.map((layer, index) => {
+      const preference = preferencesByLayerId.get(layer.id);
+
+      return {
+        id: layer.id,
+        name: layer.name,
+        description: layer.description,
+        category: layer.category,
+        geographicCoverage: layer.geographicCoverage,
+        coordinateSystem: layer.coordinateSystem,
+        geometryType: layer.geometryType,
+        featureNameProperty: layer.featureNameProperty,
+        style: layer.style,
+        dataSource: layer.dataSource,
+        lastUpdatedAtUtc: layer.version.lastUpdatedAtUtc,
+        deliveryMethod: layer.version.deliveryMethod,
+        dataUrl: layer.version.dataUrl,
+        sourceLayer: layer.version.sourceLayer,
+        minimumZoom: layer.version.minimumZoom,
+        maximumZoom: layer.version.maximumZoom,
+        legend: [],
+        visible: preference?.isVisible ?? false,
+        opacity: preference?.opacity ?? 0.8,
+        sortOrder: preference?.sortOrder ?? index,
+        filter: preference?.filter ?? null,
+      };
+    });
+  }
+
+  private loadLayerLegends(layers: LayerDefinition[]): void {
+    if (layers.length === 0) {
+      return;
+    }
+
+    forkJoin(
+      layers.map((layer) => this.layersApi.getLegend(layer.id)),
+    )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (legends) => {
+          const legendsByLayerId = new Map(
+            legends.map((legend) => [
+              legend.layerId,
+              legend.items,
+            ]),
+          );
+          this.layerOverlays.update((overlays) =>
+            overlays.map((overlay) => ({
+              ...overlay,
+              legend: legendsByLayerId.get(overlay.id) ?? [],
+            })),
+          );
+        },
+        error: () => {
+          this.apiErrorState.set(
+            'One or more layer legends could not be loaded.',
+          );
+        },
+      });
+  }
+
+  private scheduleLayerPreferenceSave(): void {
+    if (this.layerPreferencesSaveTimer) {
+      clearTimeout(this.layerPreferencesSaveTimer);
+    }
+
+    this.layerPreferencesSaveTimer = setTimeout(
+      () => this.saveLayerPreferences(),
+      300,
+    );
+  }
+
+  private saveLayerPreferences(): void {
+    const project = this.project();
+
+    if (!project) {
+      return;
+    }
+
+    const layers = this.layerOverlays().map((overlay) => ({
+      layerId: overlay.id,
+      isVisible: overlay.visible,
+      opacity: overlay.opacity,
+      sortOrder: overlay.sortOrder,
+      filter: overlay.filter,
+    }));
+
+    this.layersApi
+      .updateProjectLayers(project.id, { layers })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: (error: unknown) => {
+          this.apiErrorState.set(
+            getApiErrorMessage(
+              error,
+              'Layer preferences could not be saved.',
+            ),
+          );
+        },
+      });
   }
 }

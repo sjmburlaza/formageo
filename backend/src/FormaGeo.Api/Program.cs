@@ -1,3 +1,4 @@
+using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects.CreateProject;
 using FormaGeo.Application.Projects.GetProject;
 using FormaGeo.Application.Projects.GetProjects;
@@ -72,6 +73,7 @@ builder.Services.AddInfrastructure(
 builder.Services.AddScoped<CreateProjectHandler>();
 builder.Services.AddScoped<GetProjectHandler>();
 builder.Services.AddScoped<GetProjectsHandler>();
+builder.Services.AddScoped<LayerCatalogService>();
 
 builder.Services.AddScoped<CreateSiteHandler>();
 builder.Services.AddScoped<GetProjectSitesHandler>();
@@ -115,6 +117,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Frontend");
+var layerContentTypes =
+    new Microsoft.AspNetCore.StaticFiles
+        .FileExtensionContentTypeProvider();
+layerContentTypes.Mappings[".geojson"] =
+    "application/geo+json";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = layerContentTypes
+});
 app.UseStatusCodePages(async context =>
 {
     var response = context.HttpContext.Response;

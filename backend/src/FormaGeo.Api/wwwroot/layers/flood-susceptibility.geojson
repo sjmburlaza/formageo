@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Riverside Demonstration Area",
+        "susceptibility": "Moderate",
+        "notice": "Not suitable for risk decisions"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[120.973,14.553],[120.996,14.547],[121.012,14.558],[121.006,14.569],[120.98,14.568],[120.973,14.553]]]
+      }
+    }
+  ]
+}

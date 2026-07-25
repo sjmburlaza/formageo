@@ -178,12 +178,14 @@
       <section class="map-panel" aria-label="Site boundary map">
         <fg-map
           [features]="mapFeatures()"
+          [overlays]="layerOverlays()"
           [selectedFeatureId]="selectedSite()?.id ?? null"
           (geometryCreated)="handleGeometryCreated($event)"
           (geometryEdited)="handleGeometryEdited($event)"
           (geometryDeleted)="handleGeometryDeleted($event)"
           (featureSelected)="handleMapSelection($event)"
           (modeChanged)="handleMapModeChanged($event)"
+          (overlayStateChanged)="handleOverlayStateChanged($event)"
         />
       </section>
 

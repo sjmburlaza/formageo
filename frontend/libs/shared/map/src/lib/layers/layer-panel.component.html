@@ -1,0 +1,271 @@
+<button
+  class="fg-layers-toggle"
+  type="button"
+  [class.fg-layers-toggle--active]="open()"
+  [attr.aria-expanded]="open()"
+  aria-controls="fg-layers-panel"
+  aria-label="Open map layers"
+  title="Map layers"
+  (click)="toggleOpen()"
+>
+  <svg lucideLayers3 aria-hidden="true"></svg>
+  <span>Layers</span>
+</button>
+
+@if (open()) {
+  <aside
+    id="fg-layers-panel"
+    class="fg-layers-panel"
+    aria-label="Map layers"
+  >
+    <header class="fg-layers-panel__header">
+      <div>
+        <span>Map context</span>
+        <strong>Layers</strong>
+      </div>
+      <button type="button" aria-label="Close layers" (click)="close()">
+        <svg lucideX aria-hidden="true"></svg>
+      </button>
+    </header>
+
+    <div class="fg-layers-panel__content">
+      <section class="fg-layer-group">
+        <button
+          class="fg-layer-group__heading"
+          type="button"
+          [attr.aria-expanded]="categoryExpanded('Base maps')"
+          (click)="toggleCategory('Base maps')"
+        >
+          @if (categoryExpanded('Base maps')) {
+            <svg lucideChevronDown aria-hidden="true"></svg>
+          } @else {
+            <svg lucideChevronRight aria-hidden="true"></svg>
+          }
+          <span>Base maps</span>
+        </button>
+
+        @if (categoryExpanded('Base maps')) {
+          <div class="fg-basemap-list">
+            @for (baseMap of baseMaps; track baseMap.id) {
+              <label>
+                <input
+                  type="radio"
+                  name="fg-basemap"
+                  [value]="baseMap.id"
+                  [checked]="activeBaseMap === baseMap.id"
+                  (change)="selectBaseMap(baseMap.id)"
+                />
+                <span>{{ baseMap.label }}</span>
+              </label>
+            }
+          </div>
+        }
+      </section>
+
+      @for (category of categoryOrder; track category) {
+        @if (categoryVisible(category)) {
+          <section class="fg-layer-group">
+            <button
+              class="fg-layer-group__heading"
+              type="button"
+              [attr.aria-expanded]="categoryExpanded(category)"
+              (click)="toggleCategory(category)"
+            >
+              @if (categoryExpanded(category)) {
+                <svg lucideChevronDown aria-hidden="true"></svg>
+              } @else {
+                <svg lucideChevronRight aria-hidden="true"></svg>
+              }
+              <span>{{ category }}</span>
+              <small>{{ overlaysForCategory(category).length }}</small>
+            </button>
+
+            @if (categoryExpanded(category)) {
+              <div class="fg-overlay-list">
+                @for (
+                  overlay of overlaysForCategory(category);
+                  track overlay.id
+                ) {
+                  <article
+                    class="fg-overlay-row"
+                    [class.fg-overlay-row--visible]="overlay.visible"
+                  >
+                    <div class="fg-overlay-row__main">
+                      <button
+                        class="fg-overlay-row__visibility"
+                        type="button"
+                        [attr.aria-label]="
+                          (overlay.visible ? 'Hide ' : 'Show ') + overlay.name
+                        "
+                        [attr.aria-pressed]="overlay.visible"
+                        (click)="toggleVisibility(overlay)"
+                      >
+                        @if (overlay.visible) {
+                          <svg lucideEye aria-hidden="true"></svg>
+                        } @else {
+                          <svg lucideEyeOff aria-hidden="true"></svg>
+                        }
+                      </button>
+                      <span
+                        class="fg-overlay-row__swatch"
+                        [style.background]="
+                          overlay.style.fillColor ??
+                          overlay.style.circleColor ??
+                          overlay.style.lineColor
+                        "
+                        [style.border-color]="overlay.style.strokeColor"
+                        aria-hidden="true"
+                      ></span>
+                      <strong>{{ overlay.name }}</strong>
+                    </div>
+
+                    <div class="fg-overlay-row__actions">
+                      <button
+                        type="button"
+                        aria-label="Move layer up"
+                        title="Move layer up"
+                        (click)="moveOverlay(overlay, -1)"
+                      >
+                        <svg lucideArrowUp aria-hidden="true"></svg>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Move layer down"
+                        title="Move layer down"
+                        (click)="moveOverlay(overlay, 1)"
+                      >
+                        <svg lucideArrowDown aria-hidden="true"></svg>
+                      </button>
+                      <button
+                        type="button"
+                        [class.fg-overlay-row__action--active]="
+                          filterLayerId() === overlay.id
+                        "
+                        aria-label="Filter layer features"
+                        title="Filter features"
+                        (click)="toggleFilter(overlay.id)"
+                      >
+                        <svg lucideFilter aria-hidden="true"></svg>
+                      </button>
+                      <button
+                        type="button"
+                        [class.fg-overlay-row__action--active]="
+                          legendLayerId() === overlay.id
+                        "
+                        aria-label="View layer legend"
+                        title="Legend"
+                        (click)="toggleLegend(overlay.id)"
+                      >
+                        <svg lucideList aria-hidden="true"></svg>
+                      </button>
+                      <button
+                        type="button"
+                        [class.fg-overlay-row__action--active]="
+                          infoLayerId() === overlay.id
+                        "
+                        aria-label="View layer information"
+                        title="Source information"
+                        (click)="toggleInfo(overlay.id)"
+                      >
+                        <svg lucideInfo aria-hidden="true"></svg>
+                      </button>
+                    </div>
+
+                    @if (overlay.visible) {
+                      <label class="fg-overlay-opacity">
+                        <span>Opacity</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="5"
+                          [value]="overlay.opacity * 100"
+                          (input)="updateOpacity(overlay, $event)"
+                        />
+                        <output>{{ overlay.opacity * 100 }}%</output>
+                      </label>
+                    }
+
+                    @if (filterLayerId() === overlay.id) {
+                      <label class="fg-overlay-filter">
+                        <span>Filter by feature name</span>
+                        <input
+                          type="search"
+                          [value]="overlay.filter ?? ''"
+                          placeholder="Type a name…"
+                          (change)="updateFilter(overlay, $event)"
+                        />
+                      </label>
+                    }
+
+                    @if (legendLayerId() === overlay.id) {
+                      <div class="fg-overlay-legend" aria-label="Legend">
+                        @for (item of overlay.legend; track item.id) {
+                          <span>
+                            <i
+                              [style.background]="item.fillColor"
+                              [style.border-color]="item.strokeColor"
+                            ></i>
+                            {{ item.label }}
+                          </span>
+                        } @empty {
+                          <span>No legend items are available.</span>
+                        }
+                      </div>
+                    }
+
+                    @if (infoLayerId() === overlay.id) {
+                      <dl class="fg-overlay-info">
+                        <div>
+                          <dt>Source</dt>
+                          <dd>{{ overlay.dataSource.organization }}</dd>
+                        </div>
+                        <div>
+                          <dt>Updated</dt>
+                          <dd>
+                            {{
+                              overlay.lastUpdatedAtUtc.slice(0, 10)
+                            }}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Coverage</dt>
+                          <dd>{{ overlay.geographicCoverage }}</dd>
+                        </div>
+                        <div>
+                          <dt>CRS</dt>
+                          <dd>{{ overlay.coordinateSystem }}</dd>
+                        </div>
+                        <div>
+                          <dt>License</dt>
+                          <dd>
+                            @if (overlay.dataSource.licenseUrl) {
+                              <a
+                                [href]="overlay.dataSource.licenseUrl"
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {{ overlay.dataSource.licenseName }}
+                              </a>
+                            } @else {
+                              {{ overlay.dataSource.licenseName }}
+                            }
+                          </dd>
+                        </div>
+                      </dl>
+                    }
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
+      }
+    </div>
+
+    <footer>
+      Overlay attribution and licensing remain available in each layer’s
+      information panel.
+    </footer>
+  </aside>
+}

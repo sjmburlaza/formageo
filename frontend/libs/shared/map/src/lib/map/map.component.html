@@ -52,18 +52,60 @@
     </button>
   </div>
 
-  <label class="fg-basemap-select">
-    <span>Base map</span>
-    <select
-      aria-label="Select base map"
-      [value]="activeBaseMap()"
-      (change)="changeBaseMap($event)"
-    >
-      @for (baseMap of baseMaps; track baseMap.id) {
-        <option [value]="baseMap.id">{{ baseMap.label }}</option>
+  <fg-layer-panel
+    [baseMaps]="baseMaps"
+    [activeBaseMap]="activeBaseMap()"
+    [overlays]="overlaySignal()"
+    (baseMapChanged)="changeBaseMap($event)"
+    (overlayChanged)="handleOverlayStateChange($event)"
+  />
+
+  @if (identifiedFeature(); as feature) {
+    <article class="fg-feature-popup" aria-live="polite">
+      <header>
+        <div>
+          <span>{{ feature.layerName }}</span>
+          <strong>{{ feature.featureName }}</strong>
+        </div>
+        <button
+          type="button"
+          aria-label="Close feature details"
+          (click)="closeIdentifiedFeature()"
+        >
+          <svg lucideX aria-hidden="true"></svg>
+        </button>
+      </header>
+
+      @if (feature.attributes.length > 0) {
+        <dl>
+          @for (attribute of feature.attributes; track attribute.label) {
+            <div>
+              <dt>{{ attribute.label }}</dt>
+              <dd>{{ attribute.value }}</dd>
+            </div>
+          }
+        </dl>
       }
-    </select>
-  </label>
+
+      <footer>
+        <span>
+          Source:
+          @if (feature.source.sourceUrl) {
+            <a
+              [href]="feature.source.sourceUrl"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {{ feature.source.organization }}
+            </a>
+          } @else {
+            {{ feature.source.organization }}
+          }
+        </span>
+        <span>Updated {{ feature.lastUpdatedAtUtc.slice(0, 10) }}</span>
+      </footer>
+    </article>
+  }
 
   @if (!mapReady()) {
     <div class="fg-map-loading" aria-live="polite">
