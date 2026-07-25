@@ -24,6 +24,483 @@ namespace FormaGeo.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("FormaGeo.Domain.Layers.DataSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Attribution")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("attribution");
+
+                    b.Property<string>("LicenseName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("license_name");
+
+                    b.Property<string>("LicenseUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("license_url");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Organization")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("organization");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("source_url");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("data_sources", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("10000000-0000-0000-0000-000000000001"),
+                            Attribution = "FormaGeo demonstration data — illustrative only",
+                            LicenseName = "CC0 1.0",
+                            LicenseUrl = "https://creativecommons.org/publicdomain/zero/1.0/",
+                            Name = "FormaGeo contextual demonstration data",
+                            Organization = "FormaGeo"
+                        });
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Layers.LayerDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("CoordinateSystem")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("coordinate_system");
+
+                    b.Property<Guid>("DataSourceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("data_source_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("FeatureNameProperty")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("feature_name_property");
+
+                    b.Property<string>("GeographicCoverage")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("geographic_coverage");
+
+                    b.Property<string>("GeometryType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("geometry_type");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("StyleJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("style_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("DataSourceId");
+
+                    b.HasIndex("IsActive");
+
+                    b.ToTable("layer_definitions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000001"),
+                            Category = "Boundaries",
+                            CoordinateSystem = "EPSG:4326",
+                            DataSourceId = new Guid("10000000-0000-0000-0000-000000000001"),
+                            Description = "Illustrative administrative boundaries for testing overlay workflows.",
+                            FeatureNameProperty = "name",
+                            GeographicCoverage = "Metro Manila demonstration extent",
+                            GeometryType = "Polygon",
+                            IsActive = true,
+                            Name = "Planning districts",
+                            StyleJson = "{\"fillColor\":\"#6366f1\",\"strokeColor\":\"#3730a3\",\"strokeWidth\":2}"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000002"),
+                            Category = "Planning",
+                            CoordinateSystem = "EPSG:4326",
+                            DataSourceId = new Guid("10000000-0000-0000-0000-000000000001"),
+                            Description = "Illustrative generalized land-use areas for contextual analysis.",
+                            FeatureNameProperty = "name",
+                            GeographicCoverage = "Metro Manila demonstration extent",
+                            GeometryType = "Polygon",
+                            IsActive = true,
+                            Name = "Land-use zones",
+                            StyleJson = "{\"fillColor\":\"#f59e0b\",\"strokeColor\":\"#b45309\",\"strokeWidth\":1.5}"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000003"),
+                            Category = "Hazards",
+                            CoordinateSystem = "EPSG:4326",
+                            DataSourceId = new Guid("10000000-0000-0000-0000-000000000001"),
+                            Description = "Illustrative flood susceptibility areas; not suitable for risk decisions.",
+                            FeatureNameProperty = "name",
+                            GeographicCoverage = "Metro Manila demonstration extent",
+                            GeometryType = "Polygon",
+                            IsActive = true,
+                            Name = "Flood susceptibility",
+                            StyleJson = "{\"fillColor\":\"#0ea5e9\",\"strokeColor\":\"#0369a1\",\"strokeWidth\":1.5}"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000004"),
+                            Category = "Environment",
+                            CoordinateSystem = "EPSG:4326",
+                            DataSourceId = new Guid("10000000-0000-0000-0000-000000000001"),
+                            Description = "Illustrative environmental areas for testing planning overlays.",
+                            FeatureNameProperty = "name",
+                            GeographicCoverage = "Metro Manila demonstration extent",
+                            GeometryType = "Polygon",
+                            IsActive = true,
+                            Name = "Green and protected areas",
+                            StyleJson = "{\"fillColor\":\"#22c55e\",\"strokeColor\":\"#15803d\",\"strokeWidth\":1.5}"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000005"),
+                            Category = "Transport",
+                            CoordinateSystem = "EPSG:4326",
+                            DataSourceId = new Guid("10000000-0000-0000-0000-000000000001"),
+                            Description = "Illustrative transport links for testing line overlays.",
+                            FeatureNameProperty = "name",
+                            GeographicCoverage = "Metro Manila demonstration extent",
+                            GeometryType = "LineString",
+                            IsActive = true,
+                            Name = "Primary transport corridors",
+                            StyleJson = "{\"lineColor\":\"#ef4444\",\"lineWidth\":3}"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-0000-0000-000000000006"),
+                            Category = "Facilities",
+                            CoordinateSystem = "EPSG:4326",
+                            DataSourceId = new Guid("10000000-0000-0000-0000-000000000001"),
+                            Description = "Illustrative facility locations for testing point overlays and identification.",
+                            FeatureNameProperty = "name",
+                            GeographicCoverage = "Metro Manila demonstration extent",
+                            GeometryType = "Point",
+                            IsActive = true,
+                            Name = "Community facilities",
+                            StyleJson = "{\"circleColor\":\"#8b5cf6\",\"circleRadius\":7,\"strokeColor\":\"#ffffff\",\"strokeWidth\":2}"
+                        });
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Layers.LayerLegend", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("FillColor")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("fill_color");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("label");
+
+                    b.Property<Guid>("LayerDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("layer_definition_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("StrokeColor")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("stroke_color");
+
+                    b.Property<string>("Symbol")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("symbol");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LayerDefinitionId", "SortOrder");
+
+                    b.ToTable("layer_legends", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("40000000-0000-0000-0000-000000000001"),
+                            FillColor = "#6366f1",
+                            Label = "District boundary",
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000001"),
+                            SortOrder = 0,
+                            StrokeColor = "#3730a3"
+                        },
+                        new
+                        {
+                            Id = new Guid("40000000-0000-0000-0000-000000000002"),
+                            FillColor = "#f59e0b",
+                            Label = "Mixed-use zone",
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000002"),
+                            SortOrder = 0,
+                            StrokeColor = "#b45309"
+                        },
+                        new
+                        {
+                            Id = new Guid("40000000-0000-0000-0000-000000000003"),
+                            FillColor = "#0ea5e9",
+                            Label = "Moderate susceptibility",
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000003"),
+                            SortOrder = 0,
+                            StrokeColor = "#0369a1"
+                        },
+                        new
+                        {
+                            Id = new Guid("40000000-0000-0000-0000-000000000004"),
+                            FillColor = "#22c55e",
+                            Label = "Green / protected area",
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000004"),
+                            SortOrder = 0,
+                            StrokeColor = "#15803d"
+                        },
+                        new
+                        {
+                            Id = new Guid("40000000-0000-0000-0000-000000000005"),
+                            FillColor = "#ef4444",
+                            Label = "Primary corridor",
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000005"),
+                            SortOrder = 0,
+                            StrokeColor = "#991b1b"
+                        },
+                        new
+                        {
+                            Id = new Guid("40000000-0000-0000-0000-000000000006"),
+                            FillColor = "#8b5cf6",
+                            Label = "Community facility",
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000006"),
+                            SortOrder = 0,
+                            StrokeColor = "#ffffff"
+                        });
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Layers.LayerVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("DataUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("data_url");
+
+                    b.Property<string>("DeliveryMethod")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("delivery_method");
+
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_current");
+
+                    b.Property<DateTimeOffset>("LastUpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_updated_at_utc");
+
+                    b.Property<Guid>("LayerDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("layer_definition_id");
+
+                    b.Property<int?>("MaximumZoom")
+                        .HasColumnType("integer")
+                        .HasColumnName("maximum_zoom");
+
+                    b.Property<int?>("MinimumZoom")
+                        .HasColumnType("integer")
+                        .HasColumnName("minimum_zoom");
+
+                    b.Property<string>("SourceLayer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("source_layer");
+
+                    b.Property<string>("VersionLabel")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("version_label");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LayerDefinitionId", "IsCurrent");
+
+                    b.ToTable("layer_versions", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("30000000-0000-0000-0000-000000000001"),
+                            DataUrl = "/layers/planning-districts.geojson",
+                            DeliveryMethod = "GeoJson",
+                            IsCurrent = true,
+                            LastUpdatedAtUtc = new DateTimeOffset(new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000001"),
+                            VersionLabel = "2026.07-demo"
+                        },
+                        new
+                        {
+                            Id = new Guid("30000000-0000-0000-0000-000000000002"),
+                            DataUrl = "/layers/land-use-zones.geojson",
+                            DeliveryMethod = "GeoJson",
+                            IsCurrent = true,
+                            LastUpdatedAtUtc = new DateTimeOffset(new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000002"),
+                            VersionLabel = "2026.07-demo"
+                        },
+                        new
+                        {
+                            Id = new Guid("30000000-0000-0000-0000-000000000003"),
+                            DataUrl = "/layers/flood-susceptibility.geojson",
+                            DeliveryMethod = "GeoJson",
+                            IsCurrent = true,
+                            LastUpdatedAtUtc = new DateTimeOffset(new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000003"),
+                            VersionLabel = "2026.07-demo"
+                        },
+                        new
+                        {
+                            Id = new Guid("30000000-0000-0000-0000-000000000004"),
+                            DataUrl = "/layers/green-areas.geojson",
+                            DeliveryMethod = "GeoJson",
+                            IsCurrent = true,
+                            LastUpdatedAtUtc = new DateTimeOffset(new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000004"),
+                            VersionLabel = "2026.07-demo"
+                        },
+                        new
+                        {
+                            Id = new Guid("30000000-0000-0000-0000-000000000005"),
+                            DataUrl = "/layers/transport-corridors.geojson",
+                            DeliveryMethod = "GeoJson",
+                            IsCurrent = true,
+                            LastUpdatedAtUtc = new DateTimeOffset(new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000005"),
+                            VersionLabel = "2026.07-demo"
+                        },
+                        new
+                        {
+                            Id = new Guid("30000000-0000-0000-0000-000000000006"),
+                            DataUrl = "/layers/community-facilities.geojson",
+                            DeliveryMethod = "GeoJson",
+                            IsCurrent = true,
+                            LastUpdatedAtUtc = new DateTimeOffset(new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            LayerDefinitionId = new Guid("20000000-0000-0000-0000-000000000006"),
+                            VersionLabel = "2026.07-demo"
+                        });
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Layers.ProjectLayer", b =>
+                {
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid>("LayerDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("layer_definition_id");
+
+                    b.Property<string>("Filter")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("filter");
+
+                    b.Property<bool>("IsVisible")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_visible");
+
+                    b.Property<decimal>("Opacity")
+                        .HasPrecision(4, 3)
+                        .HasColumnType("numeric(4,3)")
+                        .HasColumnName("opacity");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("ProjectId", "LayerDefinitionId");
+
+                    b.HasIndex("LayerDefinitionId");
+
+                    b.HasIndex("ProjectId", "SortOrder");
+
+                    b.ToTable("project_layers", (string)null);
+                });
+
             modelBuilder.Entity("FormaGeo.Domain.Projects.Project", b =>
                 {
                     b.Property<Guid>("Id")
@@ -99,6 +576,50 @@ namespace FormaGeo.Infrastructure.Persistence.Migrations
                     b.ToTable("sites", (string)null);
                 });
 
+            modelBuilder.Entity("FormaGeo.Domain.Layers.LayerDefinition", b =>
+                {
+                    b.HasOne("FormaGeo.Domain.Layers.DataSource", "DataSource")
+                        .WithMany()
+                        .HasForeignKey("DataSourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DataSource");
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Layers.LayerLegend", b =>
+                {
+                    b.HasOne("FormaGeo.Domain.Layers.LayerDefinition", null)
+                        .WithMany("LegendItems")
+                        .HasForeignKey("LayerDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Layers.LayerVersion", b =>
+                {
+                    b.HasOne("FormaGeo.Domain.Layers.LayerDefinition", null)
+                        .WithMany("Versions")
+                        .HasForeignKey("LayerDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Layers.ProjectLayer", b =>
+                {
+                    b.HasOne("FormaGeo.Domain.Layers.LayerDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("LayerDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FormaGeo.Domain.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FormaGeo.Domain.Sites.Site", b =>
                 {
                     b.HasOne("FormaGeo.Domain.Projects.Project", null)
@@ -106,6 +627,13 @@ namespace FormaGeo.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Layers.LayerDefinition", b =>
+                {
+                    b.Navigation("LegendItems");
+
+                    b.Navigation("Versions");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Central Mixed-Use Zone",
+        "landUse": "Mixed use",
+        "planningNote": "Illustrative zoning only"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[121.001,14.558],[121.026,14.558],[121.026,14.578],[121.001,14.578],[121.001,14.558]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Eastern Residential Zone",
+        "landUse": "Residential",
+        "planningNote": "Illustrative zoning only"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[121.031,14.555],[121.052,14.555],[121.052,14.585],[121.031,14.585],[121.031,14.555]]]
+      }
+    }
+  ]
+}

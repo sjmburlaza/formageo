@@ -43,7 +43,11 @@
           <svg lucidePenTool aria-hidden="true"></svg>
           Draw site
         </button>
-        <button class="toolbar-button" type="button" disabled>
+        <button
+          class="toolbar-button"
+          type="button"
+          (click)="openImportWizard()"
+        >
           <svg lucideUpload aria-hidden="true"></svg>
           Import boundary
         </button>
@@ -174,12 +178,14 @@
       <section class="map-panel" aria-label="Site boundary map">
         <fg-map
           [features]="mapFeatures()"
+          [overlays]="layerOverlays()"
           [selectedFeatureId]="selectedSite()?.id ?? null"
           (geometryCreated)="handleGeometryCreated($event)"
           (geometryEdited)="handleGeometryEdited($event)"
           (geometryDeleted)="handleGeometryDeleted($event)"
           (featureSelected)="handleMapSelection($event)"
           (modeChanged)="handleMapModeChanged($event)"
+          (overlayStateChanged)="handleOverlayStateChanged($event)"
         />
       </section>
 
@@ -279,6 +285,145 @@
                     </div>
                   </dl>
                 }
+
+                <section
+                  class="site-summary"
+                  aria-labelledby="site-summary-title"
+                >
+                  <div class="site-summary__heading">
+                    <div>
+                      <p class="eyebrow">Spatial measurements</p>
+                      <h3 id="site-summary-title">Site summary</h3>
+                    </div>
+                    @if (siteSummary(); as summary) {
+                      <span>{{ summary.geometry.vertexCount }} vertices</span>
+                    }
+                  </div>
+
+                  @if (summaryLoading()) {
+                    <div class="summary-loading" aria-live="polite">
+                      <span class="spinner" aria-hidden="true"></span>
+                      Calculating measurements…
+                    </div>
+                  } @else if (summaryErrorMessage()) {
+                    <div class="summary-error" role="alert">
+                      <p>{{ summaryErrorMessage() }}</p>
+                      <button type="button" (click)="retrySiteSummary(site.id)">
+                        Try again
+                      </button>
+                    </div>
+                  } @else if (siteSummary(); as summary) {
+                    <div class="metric-grid">
+                      <article class="metric-card">
+                        <span>Area</span>
+                        <strong>
+                          {{
+                            formatArea(summary.measurements.areaSquareMetres)
+                          }}
+                        </strong>
+                      </article>
+                      <article class="metric-card">
+                        <span>Perimeter</span>
+                        <strong>
+                          {{
+                            formatPerimeter(
+                              summary.measurements.perimeterMetres
+                            )
+                          }}
+                        </strong>
+                      </article>
+                      <article class="metric-card metric-card--centroid">
+                        <span>Centroid · lon, lat</span>
+                        @if (summary.location.centroid) {
+                          <button
+                            type="button"
+                            title="Highlight centroid on map"
+                            (click)="highlightCentroid(summary)"
+                          >
+                            {{ formatCentroid(summary.location.centroid) }}
+                          </button>
+                        } @else {
+                          <strong>Unavailable</strong>
+                        }
+                      </article>
+                      <article
+                        class="metric-card"
+                        [class.metric-card--invalid]="!summary.geometry.isValid"
+                      >
+                        <span>Boundary</span>
+                        <strong>
+                          {{ summary.geometry.isValid ? 'Valid' : 'Invalid' }}
+                        </strong>
+                      </article>
+                    </div>
+
+                    <dl class="summary-details">
+                      <div>
+                        <dt>Coordinate system</dt>
+                        <dd>
+                          <strong>
+                            {{ summary.geometry.coordinateSystem }}
+                          </strong>
+                          <span>
+                            {{ summary.measurements.calculationMethod }}
+                          </span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Bounding box</dt>
+                        <dd class="bounding-box">
+                          <span>
+                            <small>West</small>
+                            {{
+                              formatCoordinate(
+                                summary.location.boundingBox.west
+                              )
+                            }}
+                          </span>
+                          <span>
+                            <small>North</small>
+                            {{
+                              formatCoordinate(
+                                summary.location.boundingBox.north
+                              )
+                            }}
+                          </span>
+                          <span>
+                            <small>East</small>
+                            {{
+                              formatCoordinate(
+                                summary.location.boundingBox.east
+                              )
+                            }}
+                          </span>
+                          <span>
+                            <small>South</small>
+                            {{
+                              formatCoordinate(
+                                summary.location.boundingBox.south
+                              )
+                            }}
+                          </span>
+                        </dd>
+                      </div>
+                    </dl>
+
+                    @if (summary.dataQualityWarnings.length > 0) {
+                      <div class="geometry-warning" role="alert">
+                        <svg lucideCircleAlert aria-hidden="true"></svg>
+                        <div>
+                          <strong>Geometry warning</strong>
+                          @for (
+                            warning of summary.dataQualityWarnings;
+                            track warning
+                          ) {
+                            <p>{{ warning }}</p>
+                          }
+                        </div>
+                      </div>
+                    }
+                  }
+                </section>
 
                 <div class="inspector-actions">
                   @if (!renaming()) {
@@ -580,5 +725,15 @@
         </form>
       </section>
     </div>
+  }
+
+  @defer (when importWizardOpen()) {
+    @if (importWizardOpen()) {
+      <fg-site-import-wizard
+        [currentProjectId]="project()!.id"
+        (closed)="closeImportWizard()"
+        (completed)="handleImportCompleted($event)"
+      />
+    }
   }
 </main>

@@ -20,6 +20,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   getApiErrorMessage,
+  LayersApiService,
   ProjectsApiService,
   SitesApiService,
 } from '@frontend/api-client';
@@ -29,8 +30,17 @@ import {
   MapFeatureSelectionEvent,
   MapGeometryEvent,
   MapInteractionMode,
+  MapOverlay,
+  MapOverlayStateChange,
 } from '@frontend/map';
-import { GeoJsonPolygon, Project, Site } from '@frontend/models';
+import {
+  GeoJsonPolygon,
+  LayerDefinition,
+  Project,
+  ProjectLayerPreference,
+  Site,
+  SiteSummary,
+} from '@frontend/models';
 import {
   LucideArrowLeft,
   LucideArrowRight,
@@ -49,6 +59,14 @@ import {
 } from '@lucide/angular';
 import { finalize, forkJoin } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
+import {
+  formatArea,
+  formatCentroid,
+  formatCoordinate,
+  formatPerimeter,
+} from './site-summary-formatters';
+import { SiteImportWizardComponent } from '../../sites/site-import/site-import-wizard.component';
+import { SiteImportCompletedEvent } from '../../sites/site-import/site-import.models';
 
 type InspectorTab = 'overview' | 'boundary' | 'analysis' | 'history';
 type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
@@ -75,6 +93,7 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
     MapComponent,
     ReactiveFormsModule,
     RouterLink,
+    SiteImportWizardComponent,
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -88,9 +107,13 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectsApi = inject(ProjectsApiService);
   private readonly sitesApi = inject(SitesApiService);
+  private readonly layersApi = inject(LayersApiService);
+  private summaryRequestSequence = 0;
+  private layerPreferencesSaveTimer?: ReturnType<typeof setTimeout>;
 
   protected readonly project = signal<Project | null>(null);
   protected readonly sites = signal<Site[]>([]);
+  protected readonly layerOverlays = signal<MapOverlay[]>([]);
   protected readonly selectedSiteId = signal<string | null>(null);
   protected readonly selectedSite = computed(
     () =>
@@ -112,14 +135,22 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
   protected readonly createModalOpen = signal(false);
+  protected readonly importWizardOpen = signal(false);
   protected readonly pendingBoundary = signal<GeoJsonPolygon | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly apiErrorState = signal<string | null>(null);
+  protected readonly siteSummary = signal<SiteSummary | null>(null);
+  protected readonly summaryLoading = signal(false);
+  protected readonly summaryErrorMessage = signal<string | null>(null);
   protected readonly createErrorMessage = signal<string | null>(null);
   protected readonly searchQuery = signal('');
   protected readonly hiddenSiteIds = signal<ReadonlySet<string>>(new Set());
   protected readonly activeInspectorTab = signal<InspectorTab>('overview');
   protected readonly renaming = signal(false);
+  protected readonly formatArea = formatArea;
+  protected readonly formatCentroid = formatCentroid;
+  protected readonly formatCoordinate = formatCoordinate;
+  protected readonly formatPerimeter = formatPerimeter;
 
   protected readonly filteredSites = computed(() => {
     const query = this.searchQuery().trim().toLocaleLowerCase();
@@ -166,6 +197,12 @@ export class ProjectDetailsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => {
+      if (this.layerPreferencesSaveTimer) {
+        clearTimeout(this.layerPreferencesSaveTimer);
+      }
+    });
+
     this.route.paramMap
       .pipe(
         map((params) => params.get('projectId') ?? ''),
@@ -203,6 +240,57 @@ export class ProjectDetailsComponent implements OnInit {
     this.createModalOpen.set(false);
     this.selectedSiteId.set(null);
     this.mapComponent?.startDrawing();
+  }
+
+  protected openImportWizard(): void {
+    if (!this.confirmDiscardGeometry('Open the boundary importer')) {
+      return;
+    }
+
+    this.discardBoundaryDraft();
+    this.importWizardOpen.set(true);
+  }
+
+  protected closeImportWizard(): void {
+    this.importWizardOpen.set(false);
+  }
+
+  protected handleImportCompleted(
+    event: SiteImportCompletedEvent,
+  ): void {
+    const project = this.project();
+
+    if (
+      !project ||
+      event.targetProjectId !== project.id ||
+      event.result.importedSites.length === 0
+    ) {
+      return;
+    }
+
+    const importedIds = new Set(
+      event.result.importedSites.map((site) => site.id),
+    );
+    this.sites.update((sites) => [
+      ...event.result.importedSites,
+      ...sites.filter((site) => !importedIds.has(site.id)),
+    ]);
+    this.project.update((currentProject) =>
+      currentProject
+        ? {
+            ...currentProject,
+            siteCount:
+              currentProject.siteCount +
+              event.result.importedSites.length,
+          }
+        : currentProject,
+    );
+    const firstImportedSite = event.result.importedSites[0];
+    this.selectedSiteId.set(firstImportedSite.id);
+    this.loadSiteSummary(firstImportedSite.id);
+    setTimeout(() =>
+      this.mapComponent?.fitToGeometry(firstImportedSite.boundary),
+    );
   }
 
   protected handleGeometryCreated(event: MapGeometryEvent): void {
@@ -250,6 +338,7 @@ export class ProjectDetailsComponent implements OnInit {
               : currentProject,
           );
           this.selectedSiteId.set(site.id);
+          this.loadSiteSummary(site.id);
           this.siteForm.reset({ name: '' });
           this.pendingBoundary.set(null);
           this.createModalOpen.set(false);
@@ -276,6 +365,7 @@ export class ProjectDetailsComponent implements OnInit {
       this.discardBoundaryDraft();
       this.renaming.set(false);
       this.activeInspectorTab.set('overview');
+      this.mapComponent?.clearHighlightedPosition();
     }
 
     if (this.hiddenSiteIds().has(site.id)) {
@@ -287,6 +377,7 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     this.selectedSiteId.set(site.id);
+    this.loadSiteSummary(site.id);
     setTimeout(() => this.mapComponent?.fitToGeometry(site.boundary));
   }
 
@@ -365,8 +456,50 @@ export class ProjectDetailsComponent implements OnInit {
     this.activeInspectorTab.set('boundary');
   }
 
+  protected handleOverlayStateChanged(
+    change: MapOverlayStateChange,
+  ): void {
+    this.layerOverlays.update((overlays) =>
+      overlays.map((overlay) =>
+        overlay.id === change.layerId
+          ? {
+              ...overlay,
+              visible: change.visible,
+              opacity: change.opacity,
+              sortOrder: change.sortOrder,
+              filter: change.filter,
+            }
+          : overlay,
+      ),
+    );
+    this.scheduleLayerPreferenceSave();
+  }
+
   protected selectInspectorTab(tab: InspectorTab): void {
     this.activeInspectorTab.set(tab);
+
+    const site = this.selectedSite();
+
+    if (tab === 'overview' && site && !this.siteSummary()) {
+      this.loadSiteSummary(site.id);
+    }
+  }
+
+  protected retrySiteSummary(siteId: string): void {
+    this.loadSiteSummary(siteId);
+  }
+
+  protected highlightCentroid(summary: SiteSummary): void {
+    const centroid = summary.location.centroid;
+
+    if (!centroid) {
+      return;
+    }
+
+    this.mapComponent?.highlightPosition([
+      centroid.longitude,
+      centroid.latitude,
+    ]);
   }
 
   protected startRenaming(site: Site): void {
@@ -462,7 +595,9 @@ export class ProjectDetailsComponent implements OnInit {
           this.replaceSite(updatedSite);
           this.unsavedGeometry.set(null);
           this.editingSiteId.set(null);
+          this.mapComponent?.clearHighlightedPosition();
           this.mapComponent?.stopEditing();
+          this.loadSiteSummary(updatedSite.id);
         },
         error: (error: unknown) => {
           this.apiErrorState.set(
@@ -560,6 +695,9 @@ export class ProjectDetailsComponent implements OnInit {
 
           if (this.selectedSiteId() === site.id) {
             this.selectedSiteId.set(null);
+            this.siteSummary.set(null);
+            this.summaryErrorMessage.set(null);
+            this.mapComponent?.clearHighlightedPosition();
           }
         },
         error: (error: unknown) => {
@@ -571,30 +709,31 @@ export class ProjectDetailsComponent implements OnInit {
   }
 
   protected downloadGeoJson(site: Site): void {
-    const feature = {
-      type: 'Feature',
-      properties: {
-        id: site.id,
-        name: site.name,
-        status: site.status,
-        coordinateSystem: 'EPSG:4326',
-      },
-      geometry: site.boundary,
-    };
-    const blob = new Blob([JSON.stringify(feature, null, 2)], {
-      type: 'application/geo+json',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const filename = site.name
-      .toLocaleLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+    this.apiErrorState.set(null);
 
-    link.href = url;
-    link.download = `${filename || 'site'}-boundary.geojson`;
-    link.click();
-    URL.revokeObjectURL(url);
+    this.sitesApi.exportSiteGeoJson(site.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const filename = site.name
+          .toLocaleLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+
+        link.href = url;
+        link.download = `${filename || 'site'}-boundary.geojson`;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (error: unknown) => {
+        this.apiErrorState.set(
+          getApiErrorMessage(
+            error,
+            'The Site could not be exported.',
+          ),
+        );
+      },
+    });
   }
 
   protected isSaving(siteId: string, action?: SavingAction): boolean {
@@ -628,19 +767,30 @@ export class ProjectDetailsComponent implements OnInit {
     this.errorMessage.set(null);
     this.project.set(null);
     this.sites.set([]);
+    this.layerOverlays.set([]);
     this.selectedSiteId.set(null);
+    this.siteSummary.set(null);
+    this.summaryLoading.set(false);
+    this.summaryErrorMessage.set(null);
+    this.summaryRequestSequence += 1;
     this.discardBoundaryDraft();
     this.hiddenSiteIds.set(new Set());
 
     forkJoin({
       project: this.projectsApi.getProject(projectId),
       sites: this.sitesApi.getProjectSites(projectId),
+      layers: this.layersApi.getLayers(),
+      projectLayers: this.layersApi.getProjectLayers(projectId),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ project, sites }) => {
+        next: ({ project, sites, layers, projectLayers }) => {
           this.project.set(project);
           this.sites.set(sites);
+          this.layerOverlays.set(
+            this.createMapOverlays(layers, projectLayers),
+          );
+          this.loadLayerLegends(layers);
         },
         error: (error: unknown) => {
           this.errorMessage.set(
@@ -683,6 +833,47 @@ export class ProjectDetailsComponent implements OnInit {
     );
   }
 
+  private loadSiteSummary(siteId: string): void {
+    const requestSequence = ++this.summaryRequestSequence;
+
+    this.siteSummary.set(null);
+    this.summaryLoading.set(true);
+    this.summaryErrorMessage.set(null);
+
+    this.sitesApi
+      .getSiteSummary(siteId)
+      .pipe(
+        finalize(() => {
+          if (requestSequence === this.summaryRequestSequence) {
+            this.summaryLoading.set(false);
+          }
+        }),
+      )
+      .subscribe({
+        next: (summary) => {
+          if (
+            requestSequence === this.summaryRequestSequence &&
+            this.selectedSiteId() === siteId
+          ) {
+            this.siteSummary.set(summary);
+          }
+        },
+        error: (error: unknown) => {
+          if (
+            requestSequence === this.summaryRequestSequence &&
+            this.selectedSiteId() === siteId
+          ) {
+            this.summaryErrorMessage.set(
+              getApiErrorMessage(
+                error,
+                'The site measurements could not be loaded.',
+              ),
+            );
+          }
+        },
+      });
+  }
+
   private cloneBoundary(boundary: GeoJsonPolygon): GeoJsonPolygon {
     return {
       type: 'Polygon',
@@ -690,5 +881,118 @@ export class ProjectDetailsComponent implements OnInit {
         ring.map(([longitude, latitude]) => [longitude, latitude]),
       ),
     };
+  }
+
+  private createMapOverlays(
+    layers: LayerDefinition[],
+    preferences: ProjectLayerPreference[],
+  ): MapOverlay[] {
+    const preferencesByLayerId = new Map(
+      preferences.map((preference) => [
+        preference.layerId,
+        preference,
+      ]),
+    );
+
+    return layers.map((layer, index) => {
+      const preference = preferencesByLayerId.get(layer.id);
+
+      return {
+        id: layer.id,
+        name: layer.name,
+        description: layer.description,
+        category: layer.category,
+        geographicCoverage: layer.geographicCoverage,
+        coordinateSystem: layer.coordinateSystem,
+        geometryType: layer.geometryType,
+        featureNameProperty: layer.featureNameProperty,
+        style: layer.style,
+        dataSource: layer.dataSource,
+        lastUpdatedAtUtc: layer.version.lastUpdatedAtUtc,
+        deliveryMethod: layer.version.deliveryMethod,
+        dataUrl: layer.version.dataUrl,
+        sourceLayer: layer.version.sourceLayer,
+        minimumZoom: layer.version.minimumZoom,
+        maximumZoom: layer.version.maximumZoom,
+        legend: [],
+        visible: preference?.isVisible ?? false,
+        opacity: preference?.opacity ?? 0.8,
+        sortOrder: preference?.sortOrder ?? index,
+        filter: preference?.filter ?? null,
+      };
+    });
+  }
+
+  private loadLayerLegends(layers: LayerDefinition[]): void {
+    if (layers.length === 0) {
+      return;
+    }
+
+    forkJoin(
+      layers.map((layer) => this.layersApi.getLegend(layer.id)),
+    )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (legends) => {
+          const legendsByLayerId = new Map(
+            legends.map((legend) => [
+              legend.layerId,
+              legend.items,
+            ]),
+          );
+          this.layerOverlays.update((overlays) =>
+            overlays.map((overlay) => ({
+              ...overlay,
+              legend: legendsByLayerId.get(overlay.id) ?? [],
+            })),
+          );
+        },
+        error: () => {
+          this.apiErrorState.set(
+            'One or more layer legends could not be loaded.',
+          );
+        },
+      });
+  }
+
+  private scheduleLayerPreferenceSave(): void {
+    if (this.layerPreferencesSaveTimer) {
+      clearTimeout(this.layerPreferencesSaveTimer);
+    }
+
+    this.layerPreferencesSaveTimer = setTimeout(
+      () => this.saveLayerPreferences(),
+      300,
+    );
+  }
+
+  private saveLayerPreferences(): void {
+    const project = this.project();
+
+    if (!project) {
+      return;
+    }
+
+    const layers = this.layerOverlays().map((overlay) => ({
+      layerId: overlay.id,
+      isVisible: overlay.visible,
+      opacity: overlay.opacity,
+      sortOrder: overlay.sortOrder,
+      filter: overlay.filter,
+    }));
+
+    this.layersApi
+      .updateProjectLayers(project.id, { layers })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: (error: unknown) => {
+          this.apiErrorState.set(
+            getApiErrorMessage(
+              error,
+              'Layer preferences could not be saved.',
+            ),
+          );
+        },
+      });
   }
 }

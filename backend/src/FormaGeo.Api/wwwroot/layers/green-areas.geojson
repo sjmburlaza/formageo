@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Demonstration Urban Green",
+        "designation": "Urban green space",
+        "status": "Illustrative"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[121.042,14.598],[121.06,14.596],[121.065,14.61],[121.049,14.616],[121.042,14.598]]]
+      }
+    }
+  ]
+}

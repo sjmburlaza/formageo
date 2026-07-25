@@ -24,6 +24,16 @@ public sealed class SiteRepository : ISiteRepository
             cancellationToken);
     }
 
+    public async Task AddRangeAsync(
+        IEnumerable<Site> sites,
+        CancellationToken cancellationToken = default)
+    {
+        _dbContext.Sites.AddRange(sites);
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+    }
+
     public Task<Site?> GetByIdAsync(
         Guid siteId,
         CancellationToken cancellationToken = default)

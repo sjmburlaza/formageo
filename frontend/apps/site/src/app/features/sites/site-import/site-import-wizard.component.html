@@ -1,0 +1,469 @@
+<div class="import-backdrop">
+  <section
+    class="import-wizard"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="import-title"
+  >
+    <header class="wizard-header">
+      <div>
+        <p class="eyebrow">Boundary import</p>
+        <h2 id="import-title">Import GeoJSON sites</h2>
+      </div>
+      <button
+        class="icon-button"
+        type="button"
+        aria-label="Close boundary importer"
+        [disabled]="submitting()"
+        (click)="close()"
+      >
+        <svg lucideX aria-hidden="true"></svg>
+      </button>
+    </header>
+
+    <ol class="stepper" aria-label="Import progress">
+      @for (
+        item of [
+          { number: 1, label: 'Upload' },
+          { number: 2, label: 'Review' },
+          { number: 3, label: 'Configure' },
+          { number: 4, label: 'Results' },
+        ];
+        track item.number
+      ) {
+        <li
+          [class.stepper__item--active]="step() === item.number"
+          [class.stepper__item--complete]="step() > item.number"
+          [attr.aria-current]="step() === item.number ? 'step' : null"
+        >
+          <span>
+            @if (step() > item.number) {
+              <svg lucideCheck aria-hidden="true"></svg>
+            } @else {
+              {{ item.number }}
+            }
+          </span>
+          <strong>{{ item.label }}</strong>
+        </li>
+      }
+    </ol>
+
+    <div class="wizard-content">
+      @if (step() === 1) {
+        <section class="upload-step" aria-labelledby="upload-title">
+          <div class="step-heading">
+            <h3 id="upload-title">Add geographic boundaries</h3>
+            <p>
+              Upload a GeoJSON file or paste its contents. Files are validated
+              before any Sites are saved.
+            </p>
+          </div>
+
+          <div class="source-tabs" role="tablist" aria-label="GeoJSON source">
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="sourceMode() === 'file'"
+              [class.source-tab--active]="sourceMode() === 'file'"
+              (click)="setSourceMode('file')"
+            >
+              <svg lucideFileUp aria-hidden="true"></svg>
+              Upload file
+            </button>
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="sourceMode() === 'paste'"
+              [class.source-tab--active]="sourceMode() === 'paste'"
+              (click)="setSourceMode('paste')"
+            >
+              <svg lucideClipboardPaste aria-hidden="true"></svg>
+              Paste GeoJSON
+            </button>
+          </div>
+
+          @if (sourceMode() === 'file') {
+            <label
+              class="drop-zone"
+              [class.drop-zone--dragging]="dragging()"
+              (dragover)="handleDragOver($event)"
+              (dragleave)="handleDragLeave($event)"
+              (drop)="handleDrop($event)"
+            >
+              <input
+                type="file"
+                accept=".geojson,.json,application/geo+json,application/json"
+                (change)="handleFileInput($event)"
+              />
+              <span class="drop-zone__icon" aria-hidden="true">
+                <svg lucideUpload></svg>
+              </span>
+              <strong>
+                {{ parsing() ? 'Reading file…' : 'Drop GeoJSON here' }}
+              </strong>
+              <p>or choose a file from your computer</p>
+              <span class="file-button">Browse files</span>
+            </label>
+          } @else {
+            <label class="paste-field">
+              <span>GeoJSON content</span>
+              <textarea
+                rows="11"
+                placeholder="Paste a GeoJSON Feature or FeatureCollection"
+                [value]="pasteContent()"
+                (input)="updatePasteContent($event)"
+              ></textarea>
+            </label>
+            <div class="paste-actions">
+              <button
+                class="button button--primary"
+                type="button"
+                (click)="parsePastedGeoJson()"
+              >
+                Review pasted GeoJSON
+              </button>
+            </div>
+          }
+
+          <div class="support-note">
+            <svg lucideFileJson aria-hidden="true"></svg>
+            <div>
+              <strong>Supported in this version</strong>
+              <p>
+                GeoJSON Polygon and MultiPolygon · EPSG:4326 or EPSG:3857 ·
+                maximum 1 MB
+              </p>
+            </div>
+          </div>
+        </section>
+      } @else if (step() === 2 && preview(); as review) {
+        <section class="review-step" aria-labelledby="review-title">
+          <div class="step-heading step-heading--row">
+            <div>
+              <h3 id="review-title">Review detected features</h3>
+              <p>{{ review.fileName }} · choose the features to import</p>
+            </div>
+            <button class="text-button" type="button" (click)="selectAllFeatures()">
+              Select all valid
+            </button>
+          </div>
+
+          <div class="review-summary">
+            <article>
+              <span>Features</span>
+              <strong>{{ review.featureCount }}</strong>
+            </article>
+            <article>
+              <span>Coordinate system</span>
+              <strong>{{ review.detectedCoordinateSystem }}</strong>
+            </article>
+            <article [class.summary-card--warning]="review.invalidFeatureCount > 0">
+              <span>Invalid</span>
+              <strong>{{ review.invalidFeatureCount }}</strong>
+            </article>
+          </div>
+
+          <div class="review-grid">
+            <div class="preview-map">
+              @if (previewMapFeatures().length > 0) {
+                <fg-map
+                  [features]="previewMapFeatures()"
+                  [selectedFeatureId]="null"
+                />
+              } @else {
+                <div class="map-empty">
+                  <svg lucideCircleAlert aria-hidden="true"></svg>
+                  <strong>No valid polygons to preview</strong>
+                </div>
+              }
+            </div>
+
+            <div class="feature-review">
+              <div class="feature-review__heading">
+                <strong>Features</strong>
+                <span>{{ selectedCount() }} selected</span>
+              </div>
+              <ul>
+                @for (feature of review.features; track feature.index) {
+                  <li [class.feature-item--invalid]="feature.issues.length > 0">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="selectedFeatureIndexes().has(feature.index)"
+                        [disabled]="feature.issues.length > 0"
+                        (change)="toggleFeature(feature.index, $event)"
+                      />
+                      <span>
+                        <strong>{{ feature.name }}</strong>
+                        <small>
+                          Feature {{ feature.index + 1 }} ·
+                          {{ feature.polygons.length }}
+                          {{
+                            feature.polygons.length === 1
+                              ? 'polygon'
+                              : 'polygons'
+                          }}
+                        </small>
+                      </span>
+                    </label>
+
+                    @for (issue of feature.issues; track issue) {
+                      <p class="feature-issue">
+                        <svg lucideCircleAlert aria-hidden="true"></svg>
+                        {{ issue }}
+                      </p>
+                    }
+                    @for (warning of feature.warnings; track warning) {
+                      <p class="feature-warning">
+                        <svg lucideCircleAlert aria-hidden="true"></svg>
+                        {{ warning }}
+                      </p>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          </div>
+        </section>
+      } @else if (step() === 3) {
+        <section class="configure-step" aria-labelledby="configure-title">
+          <div class="step-heading">
+            <h3 id="configure-title">Configure imported Sites</h3>
+            <p>
+              Set where the selected boundaries will be saved and how they
+              should be named.
+            </p>
+          </div>
+
+          <form [formGroup]="configureForm" (ngSubmit)="importSites()">
+            <label class="form-field">
+              <span>Target project</span>
+              <select formControlName="targetProjectId">
+                @if (projectsLoading()) {
+                  <option value="">Loading projects…</option>
+                }
+                @for (project of projects(); track project.id) {
+                  <option [value]="project.id">
+                    {{ project.name }}
+                    {{ project.id === currentProjectId ? '(current)' : '' }}
+                  </option>
+                }
+              </select>
+            </label>
+
+            <label class="form-field">
+              <span>Site naming rule</span>
+              <input
+                type="text"
+                formControlName="namePattern"
+                maxlength="200"
+                placeholder="Feature name pattern"
+              />
+              <small>
+                Use <code>&#123;feature&#125;</code> for the source name and
+                <code>&#123;n&#125;</code> for its import number.
+              </small>
+            </label>
+
+            <fieldset class="mode-options">
+              <legend>Polygon handling</legend>
+              <label
+                [class.mode-option--selected]="
+                  configureForm.controls.mode.value === 'Separate'
+                "
+              >
+                <input type="radio" formControlName="mode" value="Separate" />
+                <span>
+                  <strong>Import separately</strong>
+                  <small>Save every polygon as its own Site.</small>
+                </span>
+              </label>
+              <label
+                [class.mode-option--selected]="
+                  configureForm.controls.mode.value === 'Merge'
+                "
+              >
+                <input type="radio" formControlName="mode" value="Merge" />
+                <span>
+                  <strong>Merge compatible polygons</strong>
+                  <small>Create one Site when boundaries touch or overlap.</small>
+                </span>
+              </label>
+            </fieldset>
+
+            <div class="configuration-summary">
+              <svg lucideMapPinned aria-hidden="true"></svg>
+              <div>
+                <strong>{{ selectedCount() }} feature(s) selected</strong>
+                <p>{{ modeDescription() }}</p>
+              </div>
+            </div>
+          </form>
+        </section>
+      } @else if (step() === 4 && result(); as importResult) {
+        <section class="results-step" aria-labelledby="results-title">
+          <div
+            class="result-hero"
+            [class.result-hero--empty]="importResult.importedSites.length === 0"
+          >
+            <span aria-hidden="true">
+              @if (importResult.importedSites.length > 0) {
+                <svg lucideCircleCheck></svg>
+              } @else {
+                <svg lucideCircleAlert></svg>
+              }
+            </span>
+            <h3 id="results-title">
+              @if (importResult.importedSites.length > 0) {
+                {{ importResult.importedSites.length }}
+                {{
+                  importResult.importedSites.length === 1
+                    ? 'Site imported'
+                    : 'Sites imported'
+                }}
+              } @else {
+                No Sites were imported
+              }
+            </h3>
+            <p>
+              {{
+                importResult.importedSites.length > 0
+                  ? 'The new boundaries are ready to use like manually drawn Sites.'
+                  : 'Review the skipped items below and try again with compatible boundaries.'
+              }}
+            </p>
+          </div>
+
+          <div class="result-columns">
+            <section>
+              <h4>Imported Sites</h4>
+              @if (importResult.importedSites.length > 0) {
+                <ul class="result-list">
+                  @for (site of importResult.importedSites; track site.id) {
+                    <li>
+                      <svg lucideCircleCheck aria-hidden="true"></svg>
+                      <span>
+                        <strong>{{ site.name }}</strong>
+                        <small>Valid Polygon · EPSG:4326</small>
+                      </span>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="result-empty">No Sites created.</p>
+              }
+            </section>
+
+            <section>
+              <h4>Skipped & warnings</h4>
+              @if (
+                importResult.skippedFeatures.length === 0 &&
+                importResult.warnings.length === 0
+              ) {
+                <p class="result-empty">No issues found.</p>
+              } @else {
+                <ul class="result-list result-list--warnings">
+                  @for (
+                    skipped of importResult.skippedFeatures;
+                    track $index
+                  ) {
+                    <li>
+                      <svg lucideCircleAlert aria-hidden="true"></svg>
+                      <span>
+                        <strong>
+                          {{ skipped.featureName || 'Selected geometry' }}
+                        </strong>
+                        <small>{{ skipped.reason }}</small>
+                      </span>
+                    </li>
+                  }
+                  @for (warning of importResult.warnings; track warning) {
+                    <li>
+                      <svg lucideCircleAlert aria-hidden="true"></svg>
+                      <span><small>{{ warning }}</small></span>
+                    </li>
+                  }
+                </ul>
+              }
+            </section>
+          </div>
+        </section>
+      }
+
+      @if (errorMessage()) {
+        <div class="wizard-error" role="alert">
+          <svg lucideCircleAlert aria-hidden="true"></svg>
+          <p>{{ errorMessage() }}</p>
+        </div>
+      }
+    </div>
+
+    @if (step() > 1) {
+      <footer class="wizard-footer">
+        @if (step() < 4) {
+          <button
+            class="button button--secondary"
+            type="button"
+            [disabled]="submitting()"
+            (click)="goBack()"
+          >
+            <svg lucideArrowLeft aria-hidden="true"></svg>
+            Back
+          </button>
+
+          <div class="footer-summary">
+            @if (step() === 2) {
+              {{ selectedCount() }} of {{ validFeatures().length }} valid
+              features selected
+            } @else {
+              Ready to import {{ selectedPolygonCount() }} polygon(s)
+            }
+          </div>
+
+          @if (step() === 2) {
+            <button
+              class="button button--primary"
+              type="button"
+              [disabled]="selectedCount() === 0"
+              (click)="goToConfigure()"
+            >
+              Configure
+              <svg lucideArrowRight aria-hidden="true"></svg>
+            </button>
+          } @else {
+            <button
+              class="button button--primary"
+              type="button"
+              [disabled]="submitting() || configureForm.invalid"
+              (click)="importSites()"
+            >
+              <svg lucideUpload aria-hidden="true"></svg>
+              {{ submitting() ? 'Importing…' : 'Import Sites' }}
+            </button>
+          }
+        } @else {
+          <span></span>
+          <div class="result-actions">
+            @if ((result()?.importedSites?.length ?? 0) > 0) {
+              <button
+                class="button button--secondary"
+                type="button"
+                (click)="viewOnMap()"
+              >
+                <svg lucideMapPinned aria-hidden="true"></svg>
+                View on map
+              </button>
+            }
+            <button
+              class="button button--primary"
+              type="button"
+              (click)="done()"
+            >
+              Done
+            </button>
+          </div>
+        }
+      </footer>
+    }
+  </section>
+</div>

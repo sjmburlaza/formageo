@@ -1,6 +1,9 @@
+using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects;
 using FormaGeo.Application.Sites;
+using FormaGeo.Application.Sites.Summaries;
 using FormaGeo.Infrastructure.Persistence;
+using FormaGeo.Infrastructure.Persistence.Queries;
 using FormaGeo.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -34,8 +37,16 @@ public static class DependencyInjection
             ProjectRepository>();
 
         services.AddScoped<
+            ILayerCatalogRepository,
+            LayerCatalogRepository>();
+
+        services.AddScoped<
             ISiteRepository,
             SiteRepository>();
+
+        services.AddScoped<
+            ISiteSummaryReader,
+            PostGisSiteSummaryReader>();
 
         return services;
     }

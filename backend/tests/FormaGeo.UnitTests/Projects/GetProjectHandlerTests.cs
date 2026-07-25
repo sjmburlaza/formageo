@@ -88,6 +88,13 @@ public sealed class GetProjectHandlerTests
             return Task.CompletedTask;
         }
 
+        public Task AddRangeAsync(
+            IEnumerable<Site> sites,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task<Site?> GetByIdAsync(
             Guid siteId,
             CancellationToken cancellationToken = default)

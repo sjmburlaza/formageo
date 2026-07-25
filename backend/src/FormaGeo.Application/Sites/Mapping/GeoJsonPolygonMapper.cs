@@ -1,6 +1,7 @@
 using FormaGeo.Application.Sites.Contracts;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.Geometries.Utilities;
 using NetTopologySuite.Operation.Valid;
 
 namespace FormaGeo.Application.Sites.Mapping;
@@ -15,6 +16,57 @@ public static class GeoJsonPolygonMapper
             srid: RequiredSrid);
 
     public static Polygon ToDomain(
+        GeoJsonPolygonRequest? request)
+    {
+        var polygon = CreatePolygon(request);
+        EnsureValid(polygon);
+
+        return polygon;
+    }
+
+    public static IReadOnlyList<Polygon> ToImportPolygons(
+        GeoJsonPolygonRequest? request,
+        out bool repaired)
+    {
+        var polygon = CreatePolygon(request);
+
+        if (polygon.IsValid)
+        {
+            repaired = false;
+            return [polygon];
+        }
+
+        var fixedGeometry = GeometryFixer.Fix(polygon);
+        fixedGeometry.SRID = RequiredSrid;
+        IReadOnlyList<Polygon> repairedPolygons =
+            fixedGeometry switch
+        {
+            Polygon repairedPolygon => [repairedPolygon],
+            MultiPolygon multiPolygon => Enumerable
+                .Range(0, multiPolygon.NumGeometries)
+                .Select(index =>
+                    (Polygon)multiPolygon.GetGeometryN(index))
+                .ToArray(),
+            _ => []
+        };
+
+        if (repairedPolygons.Count == 0 ||
+            repairedPolygons.Any(candidate =>
+                candidate.IsEmpty || !candidate.IsValid))
+        {
+            EnsureValid(polygon);
+        }
+
+        foreach (var repairedPolygon in repairedPolygons)
+        {
+            repairedPolygon.SRID = RequiredSrid;
+        }
+
+        repaired = true;
+        return repairedPolygons;
+    }
+
+    private static Polygon CreatePolygon(
         GeoJsonPolygonRequest? request)
     {
         if (request is null)
@@ -97,6 +149,11 @@ public static class GeoJsonPolygonMapper
                 "The polygon cannot be empty.");
         }
 
+        return polygon;
+    }
+
+    private static void EnsureValid(Polygon polygon)
+    {
         var validityCheck = new IsValidOp(polygon);
 
         if (!validityCheck.IsValid)
@@ -114,8 +171,6 @@ public static class GeoJsonPolygonMapper
                 problem,
                 $"The polygon geometry is invalid: {validationMessage}.");
         }
-
-        return polygon;
     }
 
     public static GeoJsonPolygonResponse ToResponse(
