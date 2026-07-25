@@ -15,6 +15,12 @@ export class ProjectsApiService {
     return this.http.get<Project[]>(`${this.apiBaseUrl}/api/projects`);
   }
 
+  getProject(projectId: string): Observable<Project> {
+    return this.http.get<Project>(
+      `${this.apiBaseUrl}/api/projects/${projectId}`,
+    );
+  }
+
   createProject(request: CreateProjectRequest): Observable<Project> {
     return this.http.post<Project>(`${this.apiBaseUrl}/api/projects`, request);
   }

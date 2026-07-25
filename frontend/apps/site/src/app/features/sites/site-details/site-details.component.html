@@ -1,0 +1,94 @@
+<main class="site-page">
+  <nav class="app-bar" aria-label="Primary navigation">
+    <a class="brand" routerLink="/projects">
+      <span class="brand__mark" aria-hidden="true">F</span>
+      <span>FormaGeo</span>
+    </a>
+  </nav>
+
+  @if (loading()) {
+    <section class="page-state" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <h1>Loading site</h1>
+      <p>Retrieving the saved boundary…</p>
+    </section>
+  } @else if (!site()) {
+    <section class="page-state" role="alert">
+      <span class="error-icon" aria-hidden="true">!</span>
+      <h1>Unable to open site</h1>
+      <p>{{ errorMessage() }}</p>
+      <div class="state-actions">
+        <button class="button button--primary" type="button" (click)="retry()">
+          Try again
+        </button>
+        <a class="button button--secondary" routerLink="/projects">
+          Back to projects
+        </a>
+      </div>
+    </section>
+  } @else {
+    <div class="site-shell">
+      <a class="back-link" [routerLink]="['/projects', site()!.projectId]">
+        <span aria-hidden="true">←</span>
+        Back to project
+      </a>
+
+      <header class="site-header">
+        <div>
+          <p class="eyebrow">Site boundary</p>
+          <h1>{{ site()!.name }}</h1>
+          <p>Created {{ site()!.createdAtUtc | date: 'medium' }}</p>
+        </div>
+        <button
+          class="button button--danger"
+          type="button"
+          [disabled]="deleting()"
+          (click)="deleteSite()"
+        >
+          {{ deleting() ? 'Deleting…' : 'Delete site' }}
+        </button>
+      </header>
+
+      @if (errorMessage()) {
+        <p class="error-banner" role="alert">{{ errorMessage() }}</p>
+      }
+
+      <section class="details-grid">
+        <article class="card">
+          <p class="eyebrow">Metadata</p>
+          <h2>Site information</h2>
+          <dl>
+            <div>
+              <dt>Site ID</dt>
+              <dd>
+                <code>{{ site()!.id }}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>Project ID</dt>
+              <dd>
+                <code>{{ site()!.projectId }}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>Geometry</dt>
+              <dd>{{ site()!.boundary.type }}</dd>
+            </div>
+            <div>
+              <dt>Rings</dt>
+              <dd>{{ site()!.boundary.coordinates.length }}</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="card card--code">
+          <div>
+            <p class="eyebrow">EPSG:4326</p>
+            <h2>Boundary GeoJSON</h2>
+          </div>
+          <pre><code>{{ formattedBoundary(site()!) }}</code></pre>
+        </article>
+      </section>
+    </div>
+  }
+</main>

@@ -35,6 +35,16 @@ public sealed class SiteRepository : ISiteRepository
                 cancellationToken);
     }
 
+    public Task<Site?> GetForUpdateAsync(
+        Guid siteId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Sites
+            .SingleOrDefaultAsync(
+                site => site.Id == siteId,
+                cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Site>>
         GetByProjectIdAsync(
             Guid projectId,
@@ -47,6 +57,31 @@ public sealed class SiteRepository : ISiteRepository
             .OrderByDescending(site =>
                 site.CreatedAtUtc)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, int>>
+        GetCountsByProjectIdAsync(
+            IEnumerable<Guid> projectIds,
+            CancellationToken cancellationToken = default)
+    {
+        var projectIdList = projectIds
+            .Distinct()
+            .ToArray();
+
+        return await _dbContext.Sites
+            .AsNoTracking()
+            .Where(site =>
+                projectIdList.Contains(site.ProjectId))
+            .GroupBy(site => site.ProjectId)
+            .Select(group => new
+            {
+                ProjectId = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(
+                item => item.ProjectId,
+                item => item.Count,
+                cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(
@@ -69,5 +104,11 @@ public sealed class SiteRepository : ISiteRepository
             cancellationToken);
 
         return true;
+    }
+
+    public async Task SaveChangesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

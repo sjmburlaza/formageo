@@ -14,13 +14,17 @@ public sealed class Site
         Guid projectId,
         string name,
         Polygon boundary,
-        DateTimeOffset createdAtUtc)
+        DateTimeOffset createdAtUtc,
+        DateTimeOffset updatedAtUtc,
+        SiteStatus status)
     {
         Id = id;
         ProjectId = projectId;
         Name = name;
         Boundary = boundary;
         CreatedAtUtc = createdAtUtc;
+        UpdatedAtUtc = updatedAtUtc;
+        Status = status;
     }
 
     public Guid Id { get; private set; }
@@ -32,6 +36,12 @@ public sealed class Site
     public Polygon Boundary { get; private set; } = null!;
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
+
+    public DateTimeOffset UpdatedAtUtc { get; private set; }
+
+    public SiteStatus Status { get; private set; }
+
+    public DateTimeOffset? ArchivedAtUtc { get; private set; }
 
     public static Site Create(
         Guid projectId,
@@ -45,6 +55,60 @@ public sealed class Site
                 nameof(projectId));
         }
 
+        var normalizedName = NormalizeName(name);
+        ValidateBoundary(boundary);
+        var now = DateTimeOffset.UtcNow;
+
+        return new Site(
+            Guid.NewGuid(),
+            projectId,
+            normalizedName,
+            boundary,
+            now,
+            now,
+            SiteStatus.Active);
+    }
+
+    public void Rename(string name)
+    {
+        Name = NormalizeName(name);
+        Touch();
+    }
+
+    public void UpdateBoundary(Polygon boundary)
+    {
+        ValidateBoundary(boundary);
+        Boundary = boundary;
+        Touch();
+    }
+
+    public void Archive()
+    {
+        if (Status == SiteStatus.Archived)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        Status = SiteStatus.Archived;
+        ArchivedAtUtc = now;
+        UpdatedAtUtc = now;
+    }
+
+    public void Restore()
+    {
+        if (Status != SiteStatus.Archived)
+        {
+            return;
+        }
+
+        Status = SiteStatus.Active;
+        ArchivedAtUtc = null;
+        Touch();
+    }
+
+    private static string NormalizeName(string name)
+    {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new ArgumentException(
@@ -61,6 +125,11 @@ public sealed class Site
                 nameof(name));
         }
 
+        return normalizedName;
+    }
+
+    private static void ValidateBoundary(Polygon boundary)
+    {
         ArgumentNullException.ThrowIfNull(boundary);
 
         if (boundary.IsEmpty)
@@ -78,12 +147,10 @@ public sealed class Site
         }
 
         boundary.SRID = 4326;
+    }
 
-        return new Site(
-            Guid.NewGuid(),
-            projectId,
-            normalizedName,
-            boundary,
-            DateTimeOffset.UtcNow);
+    private void Touch()
+    {
+        UpdatedAtUtc = DateTimeOffset.UtcNow;
     }
 }

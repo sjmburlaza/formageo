@@ -1,65 +1,141 @@
 <main class="projects-page">
-  <header class="projects-page__header">
-    <div>
-      <p class="projects-page__eyebrow">FormaGeo Site</p>
-      <h1>Projects</h1>
-      <p>Create a project before adding sites and analyses.</p>
-    </div>
-  </header>
+  <nav class="app-bar" aria-label="Primary navigation">
+    <a class="brand" routerLink="/projects">
+      <span class="brand__mark" aria-hidden="true">F</span>
+      <span>FormaGeo</span>
+    </a>
+    <span class="app-bar__context">Site planning workspace</span>
+  </nav>
 
-  <section class="project-create">
-    <h2>Create project</h2>
+  <div class="projects-shell">
+    <header class="projects-page__header">
+      <div>
+        <p class="eyebrow">Workspace</p>
+        <h1>Projects</h1>
+        <p>Organize site boundaries and analyses by project.</p>
+      </div>
+    </header>
 
-    <form [formGroup]="projectForm" (ngSubmit)="createProject()">
-      <label for="project-name"> Project name </label>
+    <section class="project-create">
+      <div>
+        <p class="eyebrow">Start something new</p>
+        <h2>Create project</h2>
+        <p>
+          Give the workspace a clear name. You can add site boundaries next.
+        </p>
+      </div>
 
-      <input
-        id="project-name"
-        type="text"
-        formControlName="name"
-        placeholder="Example: Quezon City Site Study"
-      />
+      <form [formGroup]="projectForm" (ngSubmit)="createProject()">
+        <div class="create-row">
+          <label class="sr-only" for="project-name">Project name</label>
+          <input
+            id="project-name"
+            type="text"
+            formControlName="name"
+            placeholder="Example: Quezon City Site Study"
+            autocomplete="off"
+          />
+          <button
+            class="button button--primary"
+            type="submit"
+            [disabled]="submitting()"
+          >
+            {{ submitting() ? 'Creating…' : 'Create project' }}
+          </button>
+        </div>
 
-      @if (
-        projectForm.controls.name.touched && projectForm.controls.name.invalid
-      ) {
-        <p class="field-error">Enter a project name of up to 200 characters.</p>
-      }
-
-      <button type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Creating…' : 'Create project' }}
-      </button>
-    </form>
-  </section>
-
-  @if (errorMessage()) {
-    <p class="page-error">
-      {{ errorMessage() }}
-    </p>
-  }
-
-  <section class="project-list">
-    <h2>Your projects</h2>
-
-    @if (loading()) {
-      <p>Loading projects…</p>
-    } @else if (projects().length === 0) {
-      <p>No projects have been created yet.</p>
-    } @else {
-      <ul>
-        @for (project of projects(); track project.id) {
-          <li>
-            <article class="project-card">
-              <h3>{{ project.name }}</h3>
-
-              <p>
-                Created
-                {{ project.createdAtUtc | date: 'medium' }}
-              </p>
-            </article>
-          </li>
+        @if (
+          projectForm.controls.name.touched && projectForm.controls.name.invalid
+        ) {
+          <p class="field-error">
+            Enter a project name of up to 200 characters.
+          </p>
         }
-      </ul>
+      </form>
+    </section>
+
+    @if (errorMessage()) {
+      <div class="page-error" role="alert">
+        <span aria-hidden="true">!</span>
+        <p>{{ errorMessage() }}</p>
+        @if (!loading()) {
+          <button type="button" (click)="loadProjects()">Try again</button>
+        }
+      </div>
     }
-  </section>
+
+    <section class="project-list">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Recent work</p>
+          <h2>Your projects</h2>
+        </div>
+        @if (!loading() && projects().length > 0) {
+          <span>
+            {{ projects().length }}
+            {{ projects().length === 1 ? 'project' : 'projects' }}
+          </span>
+        }
+      </div>
+
+      @if (loading()) {
+        <div class="project-grid" aria-live="polite">
+          @for (placeholder of [1, 2, 3]; track placeholder) {
+            <div class="project-card project-card--loading">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          }
+        </div>
+      } @else if (projects().length === 0) {
+        <div class="empty-state">
+          <span class="empty-state__icon" aria-hidden="true">◇</span>
+          <h3>No projects yet</h3>
+          <p>
+            Create your first project above to start mapping candidate sites.
+          </p>
+        </div>
+      } @else {
+        <ul class="project-grid">
+          @for (project of projects(); track project.id) {
+            <li>
+              <article class="project-card">
+                <div class="project-card__top">
+                  <span class="project-card__icon" aria-hidden="true">◇</span>
+                  <details class="project-menu">
+                    <summary aria-label="Open project menu">•••</summary>
+                    <div>
+                      <a [routerLink]="['/projects', project.id]">
+                        Open workspace
+                      </a>
+                    </div>
+                  </details>
+                </div>
+
+                <div class="project-card__body">
+                  <h3>{{ project.name }}</h3>
+                  <p>Created {{ project.createdAtUtc | date: 'mediumDate' }}</p>
+                </div>
+
+                <div class="project-card__footer">
+                  <span>
+                    <strong>{{ project.siteCount }}</strong>
+                    {{ project.siteCount === 1 ? 'site' : 'sites' }}
+                  </span>
+                  <a
+                    class="open-project"
+                    [routerLink]="['/projects', project.id]"
+                  >
+                    Open project
+                    <span aria-hidden="true">→</span>
+                  </a>
+                </div>
+              </article>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
 </main>

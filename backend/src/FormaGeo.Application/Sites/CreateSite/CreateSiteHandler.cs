@@ -40,7 +40,7 @@ public sealed class CreateSiteHandler
 
         var site = Site.Create(
             projectId,
-            request.Name,
+            request.Name ?? string.Empty,
             polygon);
 
         await _siteRepository.AddAsync(

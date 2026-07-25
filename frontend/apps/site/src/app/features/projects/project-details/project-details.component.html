@@ -1,0 +1,571 @@
+<main class="workspace-page">
+  @if (loading()) {
+    <section class="page-state" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <h1>Opening map workspace</h1>
+      <p>Loading the project and its saved boundaries…</p>
+    </section>
+  } @else if (!project()) {
+    <section class="page-state page-state--error" role="alert">
+      <span class="state-icon" aria-hidden="true">!</span>
+      <h1>Unable to open project</h1>
+      <p>{{ errorMessage() }}</p>
+      <div class="state-actions">
+        <button class="button button--primary" type="button" (click)="retry()">
+          Try again
+        </button>
+        <a class="button button--secondary" routerLink="/projects">
+          Back to projects
+        </a>
+      </div>
+    </section>
+  } @else {
+    <header class="workspace-toolbar">
+      <a
+        class="back-button"
+        routerLink="/projects"
+        aria-label="Back to projects"
+      >
+        <span aria-hidden="true">←</span>
+      </a>
+
+      <div class="project-title">
+        <span>Project</span>
+        <strong>{{ project()!.name }}</strong>
+      </div>
+
+      <nav class="toolbar-actions" aria-label="Project tools">
+        <button
+          class="toolbar-button toolbar-button--primary"
+          type="button"
+          (click)="startDrawing()"
+        >
+          <span aria-hidden="true">⬡</span>
+          Draw Site
+        </button>
+        <button class="toolbar-button" type="button" disabled>
+          <span aria-hidden="true">⇧</span>
+          Import Boundary
+        </button>
+        <button class="toolbar-button" type="button" disabled>
+          <span aria-hidden="true">◫</span>
+          Compare Sites
+        </button>
+        <button class="toolbar-button" type="button" disabled>
+          <span aria-hidden="true">▤</span>
+          Generate Report
+        </button>
+      </nav>
+    </header>
+
+    @if (apiErrorState()) {
+      <div class="error-banner" role="alert">
+        <span aria-hidden="true">!</span>
+        <p>{{ apiErrorState() }}</p>
+        <button type="button" (click)="apiErrorState.set(null)">Dismiss</button>
+      </div>
+    }
+
+    <section class="workspace" aria-label="Project map workspace">
+      <aside class="sites-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Project boundaries</p>
+            <h2>Sites</h2>
+          </div>
+          <span class="count-badge">{{ sites().length }}</span>
+        </div>
+
+        <label class="site-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            placeholder="Search sites"
+            aria-label="Search sites"
+            [value]="searchQuery()"
+            (input)="updateSearch($event)"
+          />
+        </label>
+
+        @if (sites().length === 0) {
+          <div class="sites-empty">
+            <span aria-hidden="true">⬡</span>
+            <h3>No sites yet</h3>
+            <p>Draw a polygon on the map to add the first site.</p>
+            <button
+              class="button button--primary button--full"
+              type="button"
+              (click)="startDrawing()"
+            >
+              Draw first site
+            </button>
+          </div>
+        } @else if (filteredSites().length === 0) {
+          <div class="sites-empty sites-empty--compact">
+            <h3>No matching sites</h3>
+            <p>Try a different search term.</p>
+          </div>
+        } @else {
+          <ul class="site-list">
+            @for (site of filteredSites(); track site.id) {
+              <li
+                class="site-list-item"
+                [class.site-list-item--active]="selectedSite()?.id === site.id"
+                [class.site-list-item--archived]="site.status === 'Archived'"
+              >
+                <button
+                  class="visibility-button"
+                  type="button"
+                  [class.visibility-button--hidden]="
+                    hiddenSiteIds().has(site.id)
+                  "
+                  [attr.aria-label]="
+                    (hiddenSiteIds().has(site.id) ? 'Show ' : 'Hide ') +
+                    site.name
+                  "
+                  (click)="toggleSiteVisibility(site, $event)"
+                >
+                  <span aria-hidden="true">
+                    {{ hiddenSiteIds().has(site.id) ? '○' : '●' }}
+                  </span>
+                </button>
+
+                <button
+                  class="site-select-button"
+                  type="button"
+                  [attr.aria-pressed]="selectedSite()?.id === site.id"
+                  (click)="selectSite(site)"
+                >
+                  <span class="site-swatch" aria-hidden="true">⬡</span>
+                  <span class="site-copy">
+                    <strong>{{ site.name }}</strong>
+                    <small>
+                      {{ site.status }} ·
+                      {{ site.boundary.coordinates.length }}
+                      {{
+                        site.boundary.coordinates.length === 1
+                          ? 'ring'
+                          : 'rings'
+                      }}
+                    </small>
+                  </span>
+                  @if (selectedSite()?.id === site.id) {
+                    <span class="selected-indicator">Selected</span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        <footer class="panel-footer">
+          <span class="legend-swatch"></span>
+          <span>Site boundary</span>
+          <strong>EPSG:4326</strong>
+        </footer>
+      </aside>
+
+      <section class="map-panel" aria-label="Site boundary map">
+        <fg-map
+          [features]="mapFeatures()"
+          [selectedFeatureId]="selectedSite()?.id ?? null"
+          (geometryCreated)="handleGeometryCreated($event)"
+          (geometryEdited)="handleGeometryEdited($event)"
+          (geometryDeleted)="handleGeometryDeleted($event)"
+          (featureSelected)="handleMapSelection($event)"
+          (modeChanged)="handleMapModeChanged($event)"
+        />
+      </section>
+
+      <aside class="inspector-panel">
+        @if (selectedSite(); as site) {
+          <div class="inspector-heading">
+            <p class="eyebrow">Site inspector</p>
+            <h2>{{ site.name }}</h2>
+            <span
+              class="status-pill"
+              [class.status-pill--archived]="site.status === 'Archived'"
+            >
+              <i aria-hidden="true"></i>
+              {{ site.status }}
+            </span>
+          </div>
+
+          <nav class="inspector-tabs" aria-label="Site inspector sections">
+            @for (
+              tab of ['overview', 'boundary', 'analysis', 'history'];
+              track tab
+            ) {
+              <button
+                type="button"
+                [class.inspector-tab--active]="activeInspectorTab() === tab"
+                (click)="selectInspectorTab($any(tab))"
+              >
+                {{ tab | titlecase }}
+              </button>
+            }
+          </nav>
+
+          <div class="inspector-content">
+            @if (activeInspectorTab() === 'overview') {
+              <section
+                class="inspector-section"
+                aria-labelledby="overview-title"
+              >
+                <h3 id="overview-title" class="visually-hidden">Overview</h3>
+
+                @if (renaming()) {
+                  <form
+                    class="rename-form"
+                    (ngSubmit)="saveRename(site)"
+                    aria-label="Rename site"
+                  >
+                    <label for="rename-site">Site name</label>
+                    <input
+                      id="rename-site"
+                      type="text"
+                      [formControl]="renameControl"
+                      maxlength="200"
+                      autocomplete="off"
+                    />
+                    @if (renameControl.touched && renameControl.invalid) {
+                      <p class="field-error">
+                        Enter a site name of up to 200 characters.
+                      </p>
+                    }
+                    <div class="compact-actions">
+                      <button
+                        class="button button--secondary"
+                        type="button"
+                        [disabled]="isSaving(site.id)"
+                        (click)="cancelRenaming()"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        class="button button--primary"
+                        type="submit"
+                        [disabled]="isSaving(site.id)"
+                      >
+                        {{
+                          isSaving(site.id, 'rename') ? 'Saving…' : 'Save name'
+                        }}
+                      </button>
+                    </div>
+                  </form>
+                } @else {
+                  <dl class="site-facts">
+                    <div>
+                      <dt>Site name</dt>
+                      <dd>{{ site.name }}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{{ site.status }}</dd>
+                    </div>
+                    <div>
+                      <dt>Created</dt>
+                      <dd>{{ site.createdAtUtc | date: 'medium' }}</dd>
+                    </div>
+                    <div>
+                      <dt>Last updated</dt>
+                      <dd>{{ site.updatedAtUtc | date: 'medium' }}</dd>
+                    </div>
+                  </dl>
+                }
+
+                <div class="inspector-actions">
+                  @if (!renaming()) {
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      [disabled]="isSaving(site.id)"
+                      (click)="startRenaming(site)"
+                    >
+                      Rename site
+                    </button>
+                  }
+
+                  @if (site.status === 'Archived') {
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      [disabled]="isSaving(site.id)"
+                      (click)="restoreSite(site)"
+                    >
+                      {{
+                        isSaving(site.id, 'restore')
+                          ? 'Restoring…'
+                          : 'Restore site'
+                      }}
+                    </button>
+                  } @else {
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      [disabled]="isSaving(site.id)"
+                      (click)="archiveSite(site)"
+                    >
+                      {{
+                        isSaving(site.id, 'archive')
+                          ? 'Archiving…'
+                          : 'Archive site'
+                      }}
+                    </button>
+                  }
+
+                  <button
+                    class="button button--danger button--full"
+                    type="button"
+                    [disabled]="isSaving(site.id)"
+                    (click)="deleteSite(site)"
+                  >
+                    {{
+                      isSaving(site.id, 'delete') ? 'Deleting…' : 'Delete site'
+                    }}
+                  </button>
+                </div>
+              </section>
+            } @else if (activeInspectorTab() === 'boundary') {
+              <section
+                class="inspector-section"
+                aria-labelledby="boundary-title"
+              >
+                <h3 id="boundary-title" class="visually-hidden">Boundary</h3>
+                <dl class="site-facts">
+                  <div>
+                    <dt>Geometry type</dt>
+                    <dd>{{ site.boundary.type }}</dd>
+                  </div>
+                  <div>
+                    <dt>Coordinate system</dt>
+                    <dd>WGS 84 · EPSG:4326</dd>
+                  </div>
+                  <div>
+                    <dt>Validity</dt>
+                    <dd class="geometry-valid">
+                      <span aria-hidden="true">✓</span>
+                      {{
+                        hasUnsavedGeometry() && editingSiteId() === site.id
+                          ? 'Pending save validation'
+                          : 'Valid polygon'
+                      }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Boundary detail</dt>
+                    <dd>
+                      {{ site.boundary.coordinates.length }}
+                      {{
+                        site.boundary.coordinates.length === 1
+                          ? 'ring'
+                          : 'rings'
+                      }}
+                      · {{ positionCount(site) }}
+                      {{ positionCount(site) === 1 ? 'point' : 'points' }}
+                    </dd>
+                  </div>
+                </dl>
+
+                @if (editingSiteId() === site.id) {
+                  <div
+                    class="edit-state"
+                    [class.edit-state--dirty]="hasUnsavedGeometry()"
+                    role="status"
+                  >
+                    <strong>
+                      {{
+                        hasUnsavedGeometry()
+                          ? 'Unsaved boundary changes'
+                          : 'Boundary editing active'
+                      }}
+                    </strong>
+                    <p>
+                      {{
+                        hasUnsavedGeometry()
+                          ? 'Save to keep the new vertex positions, or cancel to restore the saved boundary.'
+                          : 'Drag a white vertex on the map to reshape this site.'
+                      }}
+                    </p>
+                  </div>
+
+                  <div class="inspector-actions">
+                    <button
+                      class="button button--primary button--full"
+                      type="button"
+                      [disabled]="!hasUnsavedGeometry() || isSaving(site.id)"
+                      (click)="saveBoundaryChanges()"
+                    >
+                      {{
+                        isSaving(site.id, 'boundary')
+                          ? 'Saving boundary…'
+                          : 'Save changes'
+                      }}
+                    </button>
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      [disabled]="isSaving(site.id)"
+                      (click)="cancelBoundaryEditing()"
+                    >
+                      Cancel editing
+                    </button>
+                  </div>
+                } @else {
+                  @if (site.status === 'Archived') {
+                    <p class="edit-hint">
+                      Restore this site before changing its boundary.
+                    </p>
+                  }
+                  <div class="inspector-actions">
+                    <button
+                      class="button button--primary button--full"
+                      type="button"
+                      [disabled]="site.status === 'Archived'"
+                      (click)="startBoundaryEditing(site)"
+                    >
+                      Edit boundary
+                    </button>
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      (click)="downloadGeoJson(site)"
+                    >
+                      Download GeoJSON
+                    </button>
+                  </div>
+                }
+              </section>
+            } @else if (activeInspectorTab() === 'analysis') {
+              <section class="tab-empty">
+                <span aria-hidden="true">◫</span>
+                <h3>Analysis</h3>
+                <p>Site analysis results will appear here when available.</p>
+              </section>
+            } @else {
+              <section class="inspector-section">
+                <ol class="history-list">
+                  @if (site.archivedAtUtc) {
+                    <li>
+                      <i aria-hidden="true"></i>
+                      <div>
+                        <strong>Site archived</strong>
+                        <span>{{ site.archivedAtUtc | date: 'medium' }}</span>
+                      </div>
+                    </li>
+                  }
+                  <li>
+                    <i aria-hidden="true"></i>
+                    <div>
+                      <strong>Last updated</strong>
+                      <span>{{ site.updatedAtUtc | date: 'medium' }}</span>
+                    </div>
+                  </li>
+                  <li>
+                    <i aria-hidden="true"></i>
+                    <div>
+                      <strong>Site created</strong>
+                      <span>{{ site.createdAtUtc | date: 'medium' }}</span>
+                    </div>
+                  </li>
+                </ol>
+              </section>
+            }
+          </div>
+
+          <a class="inspector-detail-link" [routerLink]="['/sites', site.id]">
+            Open full site record
+            <span aria-hidden="true">→</span>
+          </a>
+        } @else {
+          <div class="inspector-empty">
+            <span aria-hidden="true">⬡</span>
+            <h2>No site selected</h2>
+            <p>Select a site from the list or click its boundary on the map.</p>
+          </div>
+        }
+      </aside>
+    </section>
+  }
+
+  @if (createModalOpen()) {
+    <div class="modal-backdrop">
+      <section
+        class="create-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-site-title"
+      >
+        <div class="create-modal__heading">
+          <div>
+            <p class="eyebrow">New site</p>
+            <h2 id="create-site-title">Save drawn boundary</h2>
+          </div>
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Close create site form"
+            [disabled]="submitting()"
+            (click)="closeCreateModal()"
+          >
+            ×
+          </button>
+        </div>
+
+        <form [formGroup]="siteForm" (ngSubmit)="createSite()">
+          <label class="form-field" for="site-name">
+            <span>Site name</span>
+            <input
+              id="site-name"
+              type="text"
+              formControlName="name"
+              placeholder="Example: North Avenue candidate"
+              autocomplete="off"
+            />
+          </label>
+          @if (
+            siteForm.controls.name.touched && siteForm.controls.name.invalid
+          ) {
+            <p class="field-error">
+              Enter a site name of up to 200 characters.
+            </p>
+          }
+
+          <div class="boundary-status">
+            <span class="boundary-status__icon" aria-hidden="true">✓</span>
+            <div>
+              <strong>Boundary ready</strong>
+              <p>
+                Polygon drawn in WGS 84 with
+                {{ pendingBoundary()?.coordinates?.[0]?.length ?? 0 }}
+                coordinate positions.
+              </p>
+            </div>
+          </div>
+
+          @if (createErrorMessage()) {
+            <p class="form-error" role="alert">{{ createErrorMessage() }}</p>
+          }
+
+          <div class="form-actions">
+            <button
+              class="button button--secondary"
+              type="button"
+              [disabled]="submitting()"
+              (click)="closeCreateModal()"
+            >
+              Cancel
+            </button>
+            <button
+              class="button button--primary"
+              type="submit"
+              [disabled]="submitting()"
+            >
+              {{ submitting() ? 'Saving site…' : 'Save Site' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
+</main>

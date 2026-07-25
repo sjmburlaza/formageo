@@ -11,6 +11,10 @@ public interface IProjectRepository
     Task<IReadOnlyList<Project>> GetAllAsync(
         CancellationToken cancellationToken = default);
 
+    Task<Project?> GetByIdAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsAsync(
         Guid projectId,
         CancellationToken cancellationToken = default);

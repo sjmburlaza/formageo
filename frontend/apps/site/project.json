@@ -8,9 +8,7 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/site",
@@ -21,24 +19,32 @@
           {
             "glob": "**/*",
             "input": "apps/site/public"
+          },
+          {
+            "glob": "maplibre-gl-worker.mjs",
+            "input": "node_modules/maplibre-gl/dist",
+            "output": "assets/maplibre"
+          },
+          {
+            "glob": "maplibre-gl-shared.mjs",
+            "input": "node_modules/maplibre-gl/dist",
+            "output": "assets/maplibre"
           }
         ],
-        "styles": [
-          "apps/site/src/styles.scss"
-        ]
+        "styles": ["apps/site/src/styles.scss"]
       },
       "configurations": {
         "production": {
           "budgets": [
             {
               "type": "initial",
-              "maximumWarning": "500kb",
-              "maximumError": "1mb"
+              "maximumWarning": "1250kb",
+              "maximumError": "1500kb"
             },
             {
               "type": "anyComponentStyle",
-              "maximumWarning": "4kb",
-              "maximumError": "8kb"
+              "maximumWarning": "12kb",
+              "maximumError": "14kb"
             }
           ],
           "outputHashing": "all"
