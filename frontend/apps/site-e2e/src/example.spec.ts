@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-test('has title', async ({ page }) => {
-  await page.goto('/');
+test('shows the project workspace entry point', async ({ page }) => {
+  await page.goto('/projects');
 
-  // Expect h1 to contain a substring.
-  expect(await page.locator('h1').innerText()).toContain('Welcome');
+  await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Create project' }),
+  ).toBeVisible();
 });

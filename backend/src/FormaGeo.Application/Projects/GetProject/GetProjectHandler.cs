@@ -1,13 +1,13 @@
 using FormaGeo.Application.Sites;
 
-namespace FormaGeo.Application.Projects.GetProjects;
+namespace FormaGeo.Application.Projects.GetProject;
 
-public sealed class GetProjectsHandler
+public sealed class GetProjectHandler
 {
     private readonly IProjectRepository _projectRepository;
     private readonly ISiteRepository _siteRepository;
 
-    public GetProjectsHandler(
+    public GetProjectHandler(
         IProjectRepository projectRepository,
         ISiteRepository siteRepository)
     {
@@ -15,21 +15,26 @@ public sealed class GetProjectsHandler
         _siteRepository = siteRepository;
     }
 
-    public async Task<IReadOnlyList<ProjectResponse>> HandleAsync(
+    public async Task<ProjectResponse?> HandleAsync(
+        Guid projectId,
         CancellationToken cancellationToken = default)
     {
-        var projects = await _projectRepository.GetAllAsync(
+        var project = await _projectRepository.GetByIdAsync(
+            projectId,
             cancellationToken);
+
+        if (project is null)
+        {
+            return null;
+        }
 
         var siteCounts =
             await _siteRepository.GetCountsByProjectIdAsync(
-                projects.Select(project => project.Id),
+                [projectId],
                 cancellationToken);
 
-        return projects
-            .Select(project => ProjectResponse.FromDomain(
-                project,
-                siteCounts.GetValueOrDefault(project.Id)))
-            .ToList();
+        return ProjectResponse.FromDomain(
+            project,
+            siteCounts.GetValueOrDefault(projectId));
     }
 }

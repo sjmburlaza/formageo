@@ -16,6 +16,11 @@ public interface ISiteRepository
         Guid projectId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<Guid, int>>
+        GetCountsByProjectIdAsync(
+            IEnumerable<Guid> projectIds,
+            CancellationToken cancellationToken = default);
+
     Task<bool> DeleteAsync(
         Guid siteId,
         CancellationToken cancellationToken = default);

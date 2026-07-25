@@ -36,6 +36,17 @@ public sealed class ProjectRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<Project?> GetByIdAsync(
+        Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Projects
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                project => project.Id == projectId,
+                cancellationToken);
+    }
+
     public Task<bool> ExistsAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)

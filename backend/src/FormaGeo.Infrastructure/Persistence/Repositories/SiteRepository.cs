@@ -49,6 +49,31 @@ public sealed class SiteRepository : ISiteRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, int>>
+        GetCountsByProjectIdAsync(
+            IEnumerable<Guid> projectIds,
+            CancellationToken cancellationToken = default)
+    {
+        var projectIdList = projectIds
+            .Distinct()
+            .ToArray();
+
+        return await _dbContext.Sites
+            .AsNoTracking()
+            .Where(site =>
+                projectIdList.Contains(site.ProjectId))
+            .GroupBy(site => site.ProjectId)
+            .Select(group => new
+            {
+                ProjectId = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(
+                item => item.ProjectId,
+                item => item.Count,
+                cancellationToken);
+    }
+
     public async Task<bool> DeleteAsync(
         Guid siteId,
         CancellationToken cancellationToken = default)

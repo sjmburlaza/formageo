@@ -12,14 +12,15 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ProjectsApiService } from '@frontend/api-client';
+import { RouterLink } from '@angular/router';
+import { getApiErrorMessage, ProjectsApiService } from '@frontend/api-client';
 import { Project } from '@frontend/models';
 import { finalize } from 'rxjs';
 
 @Component({
   selector: 'fg-project-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './project-list.component.html',
   styleUrl: './project-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,13 +64,15 @@ export class ProjectListComponent implements OnInit {
 
           this.projectForm.reset();
         },
-        error: () => {
-          this.errorMessage.set('The project could not be created.');
+        error: (error: unknown) => {
+          this.errorMessage.set(
+            getApiErrorMessage(error, 'The project could not be created.'),
+          );
         },
       });
   }
 
-  private loadProjects(): void {
+  protected loadProjects(): void {
     this.loading.set(true);
     this.errorMessage.set(null);
 
@@ -80,8 +83,10 @@ export class ProjectListComponent implements OnInit {
         next: (projects) => {
           this.projects.set(projects);
         },
-        error: () => {
-          this.errorMessage.set('The projects could not be loaded.');
+        error: (error: unknown) => {
+          this.errorMessage.set(
+            getApiErrorMessage(error, 'The projects could not be loaded.'),
+          );
         },
       });
   }
