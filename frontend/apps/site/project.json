@@ -15,6 +15,9 @@
         "browser": "apps/site/src/main.ts",
         "tsConfig": "apps/site/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
+        "stylePreprocessorOptions": {
+          "includePaths": ["libs/shared"]
+        },
         "assets": [
           {
             "glob": "**/*",
