@@ -1,0 +1,6 @@
+@mixin tokens {
+  --fg-duration-fast: 120ms;
+  --fg-duration-normal: 200ms;
+  --fg-duration-slow: 280ms;
+  --fg-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+}

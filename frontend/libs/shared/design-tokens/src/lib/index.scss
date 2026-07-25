@@ -1,0 +1,34 @@
+@use 'styles/colors';
+@use 'styles/typography';
+@use 'styles/spacing';
+@use 'styles/radius';
+@use 'styles/shadows';
+@use 'styles/motion';
+@use 'styles/breakpoints';
+@use 'styles/z-index';
+@use 'themes/light-theme';
+@use 'themes/dark-theme';
+
+:root {
+  @include colors.tokens;
+  @include typography.tokens;
+  @include spacing.tokens;
+  @include radius.tokens;
+  @include shadows.tokens;
+  @include motion.tokens;
+  @include breakpoints.tokens;
+  @include z-index.tokens;
+  @include light-theme.tokens;
+
+  --fg-topbar-height: 3.5rem;
+  --fg-sidebar-width: 15rem;
+  --fg-sidebar-collapsed-width: 4rem;
+  --fg-context-panel-width: 25rem;
+  --fg-control-height-sm: 2rem;
+  --fg-control-height-md: 2.5rem;
+  --fg-control-height-lg: 3rem;
+}
+
+[data-fg-theme='dark'] {
+  @include dark-theme.tokens;
+}

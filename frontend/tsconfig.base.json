@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "strict": false,
     "paths": {
+      "@frontend/design-tokens": ["./libs/shared/design-tokens/src/index.ts"],
       "@frontend/ui": ["./libs/shared/ui/src/index.ts"],
       "@frontend/map": ["./libs/shared/map/src/index.ts"],
       "@frontend/authentication": ["./libs/shared/authentication/src/index.ts"],

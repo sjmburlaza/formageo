@@ -1,0 +1,12 @@
+@mixin tokens {
+  --fg-z-base: 0;
+  --fg-z-sticky: 100;
+  --fg-z-map-controls: 200;
+  --fg-z-sidebar: 300;
+  --fg-z-drawer: 500;
+  --fg-z-dropdown: 600;
+  --fg-z-tooltip: 700;
+  --fg-z-modal-backdrop: 800;
+  --fg-z-modal: 900;
+  --fg-z-toast: 1000;
+}

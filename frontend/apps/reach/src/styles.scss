@@ -1,1 +1,16 @@
-/* You can add global styles to this file, and also import other style files */
+@use '../../../libs/shared/design-tokens/src/lib/index';
+
+html {
+  min-width: 20rem;
+  min-height: 100%;
+  color: var(--fg-text-primary);
+  background: var(--fg-surface-page);
+  font-family: var(--fg-font-sans);
+  font-size: 14px;
+  line-height: var(--fg-leading-body-md);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+}

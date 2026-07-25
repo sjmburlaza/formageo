@@ -29,6 +29,13 @@ import {
   setWorkerUrl,
   StyleSpecification,
 } from 'maplibre-gl';
+import {
+  LucideExpand,
+  LucidePencil,
+  LucidePenTool,
+  LucideTrash2,
+  LucideUndo2,
+} from '@lucide/angular';
 
 export type MapPosition = [longitude: number, latitude: number];
 
@@ -80,7 +87,13 @@ const EMPTY_COLLECTION: FeatureCollection = {
 @Component({
   selector: 'fg-map',
   standalone: true,
-  imports: [],
+  imports: [
+    LucideExpand,
+    LucidePencil,
+    LucidePenTool,
+    LucideTrash2,
+    LucideUndo2,
+  ],
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -100,11 +113,11 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   protected readonly mode = signal<MapInteractionMode>('idle');
   protected readonly selectedFeatureIdSignal = signal<string | null>(null);
-  protected readonly activeBaseMap = signal('streets');
+  protected readonly activeBaseMap = signal('light');
   protected readonly mapReady = signal(false);
   protected readonly baseMaps: BaseMapDefinition[] = [
-    { id: 'streets', label: 'Streets' },
     { id: 'light', label: 'Light' },
+    { id: 'streets', label: 'Streets' },
     { id: 'satellite', label: 'Satellite' },
   ];
 
@@ -241,6 +254,27 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     return this.getSelectedFeature()?.properties?.['status'] !== 'Archived';
   }
 
+  protected undoLastPoint(): void {
+    if (this.mode() !== 'drawing' || this.draftPositions.length === 0) {
+      return;
+    }
+
+    this.draftPositions.pop();
+    this.updateDraftSource();
+  }
+
+  protected canUndoDrawing(): boolean {
+    return this.draftPositions.length > 0;
+  }
+
+  protected fitSelectedFeature(): void {
+    const feature = this.getSelectedFeature();
+
+    if (feature) {
+      this.fitToGeometry(feature.geometry);
+    }
+  }
+
   protected handleKeydown(event: KeyboardEvent): void {
     if (this.mode() === 'drawing') {
       if (event.key === 'Escape') {
@@ -336,12 +370,12 @@ export class MapComponent implements AfterViewInit, OnDestroy {
           id: 'fg-basemap-streets',
           type: 'raster',
           source: 'fg-basemap-streets-source',
+          layout: { visibility: 'none' },
         },
         {
           id: 'fg-basemap-light',
           type: 'raster',
           source: 'fg-basemap-light-source',
-          layout: { visibility: 'none' },
           paint: {
             'raster-saturation': -0.9,
             'raster-contrast': -0.2,
@@ -386,8 +420,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
         'fill-color': [
           'case',
           ['==', ['get', 'status'], 'Archived'],
-          '#7e8982',
-          '#2f7d4b',
+          '#94a3b8',
+          '#10b981',
         ],
         'fill-opacity': [
           'case',
@@ -405,8 +439,8 @@ export class MapComponent implements AfterViewInit, OnDestroy {
         'line-color': [
           'case',
           ['==', ['get', 'status'], 'Archived'],
-          '#69736d',
-          '#21633a',
+          '#64748b',
+          '#047857',
         ],
         'line-width': 2,
       },
@@ -417,7 +451,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       source: FEATURES_SOURCE,
       filter: ['==', ['get', 'id'], ''],
       paint: {
-        'fill-color': '#d7922d',
+        'fill-color': '#f59e0b',
         'fill-opacity': 0.52,
       },
     });
@@ -427,7 +461,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       source: FEATURES_SOURCE,
       filter: ['==', ['get', 'id'], ''],
       paint: {
-        'line-color': '#9c5c0a',
+        'line-color': '#b45309',
         'line-width': 3,
       },
     });
@@ -437,7 +471,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       source: DRAFT_SOURCE,
       filter: ['==', '$type', 'Polygon'],
       paint: {
-        'fill-color': '#21835a',
+        'fill-color': '#34d399',
         'fill-opacity': 0.22,
       },
     });
@@ -447,7 +481,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       source: DRAFT_SOURCE,
       filter: ['==', '$type', 'LineString'],
       paint: {
-        'line-color': '#0e6841',
+        'line-color': '#059669',
         'line-width': 3,
         'line-dasharray': [1.2, 1],
       },
@@ -460,7 +494,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       paint: {
         'circle-radius': 5,
         'circle-color': '#ffffff',
-        'circle-stroke-color': '#0e6841',
+        'circle-stroke-color': '#059669',
         'circle-stroke-width': 2,
       },
     });
@@ -471,7 +505,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       paint: {
         'circle-radius': 6,
         'circle-color': '#ffffff',
-        'circle-stroke-color': '#9c5c0a',
+        'circle-stroke-color': '#b45309',
         'circle-stroke-width': 3,
       },
     });
@@ -544,7 +578,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.featureSelected.emit({ featureId });
   }
 
-  private completeDrawing(): void {
+  protected completeDrawing(): void {
     this.removeConsecutiveDuplicateDraftPosition();
 
     if (this.draftPositions.length < 3) {

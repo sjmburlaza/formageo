@@ -16,7 +16,7 @@
       title="Draw polygon"
       (click)="mode() === 'drawing' ? cancelDrawing() : startDrawing()"
     >
-      <span aria-hidden="true">⬡</span>
+      <svg lucidePenTool aria-hidden="true"></svg>
     </button>
     <button
       class="fg-map-tool"
@@ -28,7 +28,17 @@
       title="Edit selected polygon"
       (click)="mode() === 'editing' ? stopEditing() : editSelected()"
     >
-      <span aria-hidden="true">⌁</span>
+      <svg lucidePencil aria-hidden="true"></svg>
+    </button>
+    <button
+      class="fg-map-tool"
+      type="button"
+      [disabled]="!selectedFeatureIdSignal()"
+      aria-label="Fit map to selected polygon"
+      title="Fit to selection"
+      (click)="fitSelectedFeature()"
+    >
+      <svg lucideExpand aria-hidden="true"></svg>
     </button>
     <button
       class="fg-map-tool fg-map-tool--danger"
@@ -38,7 +48,7 @@
       title="Delete selected polygon"
       (click)="requestSelectedFeatureRemoval()"
     >
-      <span aria-hidden="true">⌫</span>
+      <svg lucideTrash2 aria-hidden="true"></svg>
     </button>
   </div>
 
@@ -64,14 +74,35 @@
 
   @if (mode() === 'drawing') {
     <div class="fg-map-instructions" role="status">
-      <strong>Draw a site boundary</strong>
-      <span>Click to add points · Double-click or press Enter to finish</span>
-      <button type="button" (click)="cancelDrawing()">Cancel</button>
+      <div>
+        <strong>Draw a site boundary</strong>
+        <span>Click to add points. Click the first point to close.</span>
+      </div>
+      <span class="fg-map-instructions__actions">
+        <button
+          type="button"
+          [disabled]="!canUndoDrawing()"
+          (click)="undoLastPoint()"
+        >
+          <svg lucideUndo2 aria-hidden="true"></svg>
+          Undo
+        </button>
+        <button type="button" (click)="cancelDrawing()">Cancel</button>
+        <button
+          class="fg-map-instructions__primary"
+          type="button"
+          (click)="completeDrawing()"
+        >
+          Complete
+        </button>
+      </span>
     </div>
   } @else if (mode() === 'editing') {
     <div class="fg-map-instructions" role="status">
-      <strong>Edit boundary</strong>
-      <span>Drag a white vertex to reshape the polygon</span>
+      <div>
+        <strong>Edit boundary</strong>
+        <span>Drag a white vertex to reshape the polygon.</span>
+      </div>
       <button type="button" (click)="stopEditing()">Done</button>
     </div>
   }

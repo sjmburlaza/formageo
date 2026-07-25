@@ -4,7 +4,9 @@
       <span class="brand__mark" aria-hidden="true">F</span>
       <span>FormaGeo</span>
     </a>
-    <span class="app-bar__context">Site planning workspace</span>
+    <span class="app-bar__context"
+      >Shape better decisions with spatial intelligence.</span
+    >
   </nav>
 
   <div class="projects-shell">
@@ -26,8 +28,8 @@
       </div>
 
       <form [formGroup]="projectForm" (ngSubmit)="createProject()">
+        <label class="form-label" for="project-name">Project name</label>
         <div class="create-row">
-          <label class="sr-only" for="project-name">Project name</label>
           <input
             id="project-name"
             type="text"
@@ -40,6 +42,7 @@
             type="submit"
             [disabled]="submitting()"
           >
+            <svg lucidePlus aria-hidden="true"></svg>
             {{ submitting() ? 'Creating…' : 'Create project' }}
           </button>
         </div>
@@ -56,7 +59,7 @@
 
     @if (errorMessage()) {
       <div class="page-error" role="alert">
-        <span aria-hidden="true">!</span>
+        <svg lucideCircleAlert aria-hidden="true"></svg>
         <p>{{ errorMessage() }}</p>
         @if (!loading()) {
           <button type="button" (click)="loadProjects()">Try again</button>
@@ -90,11 +93,17 @@
         </div>
       } @else if (projects().length === 0) {
         <div class="empty-state">
-          <span class="empty-state__icon" aria-hidden="true">◇</span>
-          <h3>No projects yet</h3>
+          <span class="empty-state__icon" aria-hidden="true">
+            <svg lucideLandPlot></svg>
+          </span>
+          <h3>Create your first project</h3>
           <p>
-            Create your first project above to start mapping candidate sites.
+            Organize candidate sites, analysis criteria, spatial data, and
+            reports inside a project.
           </p>
+          <a class="button button--secondary" href="#project-name">
+            Create project
+          </a>
         </div>
       } @else {
         <ul class="project-grid">
@@ -102,9 +111,13 @@
             <li>
               <article class="project-card">
                 <div class="project-card__top">
-                  <span class="project-card__icon" aria-hidden="true">◇</span>
+                  <span class="project-card__icon" aria-hidden="true">
+                    <svg lucideLandPlot></svg>
+                  </span>
                   <details class="project-menu">
-                    <summary aria-label="Open project menu">•••</summary>
+                    <summary aria-label="Open project menu">
+                      <svg lucideEllipsis aria-hidden="true"></svg>
+                    </summary>
                     <div>
                       <a [routerLink]="['/projects', project.id]">
                         Open workspace
@@ -128,7 +141,7 @@
                     [routerLink]="['/projects', project.id]"
                   >
                     Open project
-                    <span aria-hidden="true">→</span>
+                    <svg lucideArrowRight aria-hidden="true"></svg>
                   </a>
                 </div>
               </article>

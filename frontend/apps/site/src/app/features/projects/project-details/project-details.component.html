@@ -7,7 +7,7 @@
     </section>
   } @else if (!project()) {
     <section class="page-state page-state--error" role="alert">
-      <span class="state-icon" aria-hidden="true">!</span>
+      <svg class="state-icon" lucideCircleAlert aria-hidden="true"></svg>
       <h1>Unable to open project</h1>
       <p>{{ errorMessage() }}</p>
       <div class="state-actions">
@@ -26,7 +26,7 @@
         routerLink="/projects"
         aria-label="Back to projects"
       >
-        <span aria-hidden="true">←</span>
+        <svg lucideArrowLeft aria-hidden="true"></svg>
       </a>
 
       <div class="project-title">
@@ -40,27 +40,27 @@
           type="button"
           (click)="startDrawing()"
         >
-          <span aria-hidden="true">⬡</span>
-          Draw Site
+          <svg lucidePenTool aria-hidden="true"></svg>
+          Draw site
         </button>
         <button class="toolbar-button" type="button" disabled>
-          <span aria-hidden="true">⇧</span>
-          Import Boundary
+          <svg lucideUpload aria-hidden="true"></svg>
+          Import boundary
         </button>
         <button class="toolbar-button" type="button" disabled>
-          <span aria-hidden="true">◫</span>
-          Compare Sites
+          <svg lucideColumns3 aria-hidden="true"></svg>
+          Compare sites
         </button>
         <button class="toolbar-button" type="button" disabled>
-          <span aria-hidden="true">▤</span>
-          Generate Report
+          <svg lucideFileText aria-hidden="true"></svg>
+          Generate report
         </button>
       </nav>
     </header>
 
     @if (apiErrorState()) {
       <div class="error-banner" role="alert">
-        <span aria-hidden="true">!</span>
+        <svg lucideCircleAlert aria-hidden="true"></svg>
         <p>{{ apiErrorState() }}</p>
         <button type="button" (click)="apiErrorState.set(null)">Dismiss</button>
       </div>
@@ -77,7 +77,7 @@
         </div>
 
         <label class="site-search">
-          <span aria-hidden="true">⌕</span>
+          <svg lucideSearch aria-hidden="true"></svg>
           <input
             type="search"
             placeholder="Search sites"
@@ -89,15 +89,17 @@
 
         @if (sites().length === 0) {
           <div class="sites-empty">
-            <span aria-hidden="true">⬡</span>
-            <h3>No sites yet</h3>
-            <p>Draw a polygon on the map to add the first site.</p>
+            <span aria-hidden="true"><svg lucideLandPlot></svg></span>
+            <h3>No sites have been added</h3>
+            <p>
+              Add a location by drawing a boundary or importing spatial data.
+            </p>
             <button
               class="button button--primary button--full"
               type="button"
               (click)="startDrawing()"
             >
-              Draw first site
+              Add site
             </button>
           </div>
         } @else if (filteredSites().length === 0) {
@@ -125,9 +127,11 @@
                   "
                   (click)="toggleSiteVisibility(site, $event)"
                 >
-                  <span aria-hidden="true">
-                    {{ hiddenSiteIds().has(site.id) ? '○' : '●' }}
-                  </span>
+                  @if (hiddenSiteIds().has(site.id)) {
+                    <svg lucideEyeOff aria-hidden="true"></svg>
+                  } @else {
+                    <svg lucideEye aria-hidden="true"></svg>
+                  }
                 </button>
 
                 <button
@@ -136,7 +140,9 @@
                   [attr.aria-pressed]="selectedSite()?.id === site.id"
                   (click)="selectSite(site)"
                 >
-                  <span class="site-swatch" aria-hidden="true">⬡</span>
+                  <span class="site-swatch" aria-hidden="true">
+                    <svg lucideLandPlot></svg>
+                  </span>
                   <span class="site-copy">
                     <strong>{{ site.name }}</strong>
                     <small>
@@ -344,7 +350,7 @@
                   <div>
                     <dt>Validity</dt>
                     <dd class="geometry-valid">
-                      <span aria-hidden="true">✓</span>
+                      <svg lucideCircleCheck aria-hidden="true"></svg>
                       {{
                         hasUnsavedGeometry() && editingSiteId() === site.id
                           ? 'Pending save validation'
@@ -438,9 +444,14 @@
               </section>
             } @else if (activeInspectorTab() === 'analysis') {
               <section class="tab-empty">
-                <span aria-hidden="true">◫</span>
-                <h3>Analysis</h3>
-                <p>Site analysis results will appear here when available.</p>
+                <span aria-hidden="true">
+                  <svg lucideChartNoAxesCombined></svg>
+                </span>
+                <h3>No analyses yet</h3>
+                <p>
+                  Run a suitability analysis to compare candidate sites against
+                  project criteria.
+                </p>
               </section>
             } @else {
               <section class="inspector-section">
@@ -475,11 +486,11 @@
 
           <a class="inspector-detail-link" [routerLink]="['/sites', site.id]">
             Open full site record
-            <span aria-hidden="true">→</span>
+            <svg lucideArrowRight aria-hidden="true"></svg>
           </a>
         } @else {
           <div class="inspector-empty">
-            <span aria-hidden="true">⬡</span>
+            <span aria-hidden="true"><svg lucideLandPlot></svg></span>
             <h2>No site selected</h2>
             <p>Select a site from the list or click its boundary on the map.</p>
           </div>
@@ -508,7 +519,7 @@
             [disabled]="submitting()"
             (click)="closeCreateModal()"
           >
-            ×
+            <svg lucideX aria-hidden="true"></svg>
           </button>
         </div>
 
@@ -532,7 +543,9 @@
           }
 
           <div class="boundary-status">
-            <span class="boundary-status__icon" aria-hidden="true">✓</span>
+            <span class="boundary-status__icon" aria-hidden="true">
+              <svg lucideCircleCheck></svg>
+            </span>
             <div>
               <strong>Boundary ready</strong>
               <p>
@@ -561,7 +574,7 @@
               type="submit"
               [disabled]="submitting()"
             >
-              {{ submitting() ? 'Saving site…' : 'Save Site' }}
+              {{ submitting() ? 'Saving site…' : 'Save site' }}
             </button>
           </div>
         </form>

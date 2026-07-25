@@ -1,0 +1,30 @@
+@mixin tokens {
+  --fg-font-sans:
+    Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  --fg-font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+  --fg-text-display-lg: 2.5rem;
+  --fg-text-display-sm: 2rem;
+  --fg-text-heading-xl: 1.75rem;
+  --fg-text-heading-lg: 1.5rem;
+  --fg-text-heading-md: 1.25rem;
+  --fg-text-heading-sm: 1rem;
+  --fg-text-body-lg: 1rem;
+  --fg-text-body-md: 0.875rem;
+  --fg-text-body-sm: 0.8125rem;
+  --fg-text-label-md: 0.875rem;
+  --fg-text-label-sm: 0.75rem;
+  --fg-text-caption: 0.6875rem;
+
+  --fg-leading-display-lg: 3rem;
+  --fg-leading-display-sm: 2.5rem;
+  --fg-leading-heading-xl: 2.25rem;
+  --fg-leading-heading-lg: 2rem;
+  --fg-leading-heading-md: 1.75rem;
+  --fg-leading-heading-sm: 1.5rem;
+  --fg-leading-body-lg: 1.5rem;
+  --fg-leading-body-md: 1.25rem;
+  --fg-leading-body-sm: 1.125rem;
+  --fg-leading-caption: 1rem;
+}
