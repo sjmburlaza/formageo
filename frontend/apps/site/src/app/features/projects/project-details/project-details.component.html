@@ -1,21 +1,9 @@
 <main class="workspace-page">
-  <nav class="app-bar" aria-label="Primary navigation">
-    <a class="brand" routerLink="/projects">
-      <span class="brand__mark" aria-hidden="true">F</span>
-      <span>FormaGeo</span>
-    </a>
-
-    <a class="back-link" routerLink="/projects">
-      <span aria-hidden="true">←</span>
-      All projects
-    </a>
-  </nav>
-
   @if (loading()) {
     <section class="page-state" aria-live="polite">
       <span class="spinner" aria-hidden="true"></span>
-      <h1>Opening project workspace</h1>
-      <p>Loading the project and its sites…</p>
+      <h1>Opening map workspace</h1>
+      <p>Loading the project and its saved boundaries…</p>
     </section>
   } @else if (!project()) {
     <section class="page-state page-state--error" role="alert">
@@ -32,27 +20,38 @@
       </div>
     </section>
   } @else {
-    <header class="project-header">
-      <div>
-        <p class="eyebrow">Project workspace</p>
-        <h1>{{ project()!.name }}</h1>
-        <p class="project-meta">
-          Created {{ project()!.createdAtUtc | date: 'mediumDate' }}
-          <span aria-hidden="true">·</span>
-          {{ sites().length }} {{ sites().length === 1 ? 'site' : 'sites' }}
-        </p>
+    <header class="workspace-toolbar">
+      <a class="back-button" routerLink="/projects" aria-label="Back to projects">
+        <span aria-hidden="true">←</span>
+      </a>
+
+      <div class="project-title">
+        <span>Project</span>
+        <strong>{{ project()!.name }}</strong>
       </div>
 
-      <div class="project-actions">
+      <nav class="toolbar-actions" aria-label="Project tools">
         <button
-          class="button button--primary"
+          class="toolbar-button toolbar-button--primary"
           type="button"
-          (click)="openCreatePanel()"
+          (click)="startDrawing()"
         >
-          <span aria-hidden="true">＋</span>
-          Create site
+          <span aria-hidden="true">⬡</span>
+          Draw Site
         </button>
-      </div>
+        <button class="toolbar-button" type="button" disabled>
+          <span aria-hidden="true">⇧</span>
+          Import Boundary
+        </button>
+        <button class="toolbar-button" type="button" disabled>
+          <span aria-hidden="true">◫</span>
+          Compare Sites
+        </button>
+        <button class="toolbar-button" type="button" disabled>
+          <span aria-hidden="true">▤</span>
+          Generate Report
+        </button>
+      </nav>
     </header>
 
     @if (errorMessage()) {
@@ -63,112 +62,164 @@
       </div>
     }
 
-    <section class="workspace" aria-label="Project workspace">
+    <section class="workspace" aria-label="Project map workspace">
       <aside class="sites-panel">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">Boundaries</p>
+            <p class="eyebrow">Project boundaries</p>
             <h2>Sites</h2>
           </div>
           <span class="count-badge">{{ sites().length }}</span>
         </div>
 
+        <label class="site-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            placeholder="Search sites"
+            aria-label="Search sites"
+            [value]="searchQuery()"
+            (input)="updateSearch($event)"
+          />
+        </label>
+
         @if (sites().length === 0) {
           <div class="sites-empty">
-            <span class="sites-empty__icon" aria-hidden="true">◇</span>
+            <span aria-hidden="true">⬡</span>
             <h3>No sites yet</h3>
-            <p>Create a boundary using GeoJSON to start your site study.</p>
+            <p>Draw a polygon on the map to add the first site.</p>
             <button
-              class="button button--secondary button--full"
+              class="button button--primary button--full"
               type="button"
-              (click)="openCreatePanel()"
+              (click)="startDrawing()"
             >
-              Create first site
+              Draw first site
             </button>
+          </div>
+        } @else if (filteredSites().length === 0) {
+          <div class="sites-empty sites-empty--compact">
+            <h3>No matching sites</h3>
+            <p>Try a different search term.</p>
           </div>
         } @else {
           <ul class="site-list">
-            @for (site of sites(); track site.id) {
-              <li>
+            @for (site of filteredSites(); track site.id) {
+              <li
+                class="site-list-item"
+                [class.site-list-item--active]="selectedSite()?.id === site.id"
+              >
                 <button
-                  class="site-list-item"
-                  [class.site-list-item--active]="
-                    selectedSite()?.id === site.id
-                  "
-                  [attr.aria-pressed]="selectedSite()?.id === site.id"
+                  class="visibility-button"
                   type="button"
+                  [class.visibility-button--hidden]="
+                    hiddenSiteIds().has(site.id)
+                  "
+                  [attr.aria-label]="
+                    (hiddenSiteIds().has(site.id) ? 'Show ' : 'Hide ') +
+                    site.name
+                  "
+                  (click)="toggleSiteVisibility(site, $event)"
+                >
+                  <span aria-hidden="true">
+                    {{ hiddenSiteIds().has(site.id) ? '○' : '●' }}
+                  </span>
+                </button>
+
+                <button
+                  class="site-select-button"
+                  type="button"
+                  [attr.aria-pressed]="selectedSite()?.id === site.id"
                   (click)="selectSite(site)"
                 >
-                  <span class="site-list-item__icon" aria-hidden="true">◇</span>
-                  <span class="site-list-item__copy">
+                  <span class="site-swatch" aria-hidden="true">⬡</span>
+                  <span class="site-copy">
                     <strong>{{ site.name }}</strong>
-                    <span>{{ site.createdAtUtc | date: 'mediumDate' }}</span>
+                    <small>
+                      {{ site.boundary.coordinates.length }}
+                      {{ site.boundary.coordinates.length === 1 ? 'ring' : 'rings' }}
+                    </small>
                   </span>
-                  <span class="site-list-item__arrow" aria-hidden="true"
-                    >›</span
-                  >
+                  @if (selectedSite()?.id === site.id) {
+                    <span class="selected-indicator">Selected</span>
+                  }
                 </button>
               </li>
             }
           </ul>
         }
+
+        <footer class="panel-footer">
+          <span class="legend-swatch"></span>
+          <span>Site boundary</span>
+          <strong>EPSG:4326</strong>
+        </footer>
       </aside>
 
-      <section class="map-placeholder" aria-label="Map placeholder">
-        <div class="map-grid" aria-hidden="true"></div>
-        <div class="map-message">
-          <span class="map-pin" aria-hidden="true">⌖</span>
-          @if (selectedSite(); as site) {
-            <p class="eyebrow">Selected boundary</p>
-            <h2>{{ site.name }}</h2>
-            <p>Map visualization will appear here in the next phase.</p>
-          } @else {
-            <h2>Select a site or create your first site boundary.</h2>
-            <p>The interactive map will be introduced in a later phase.</p>
-          }
-        </div>
-        <span class="map-label">Map canvas</span>
+      <section class="map-panel" aria-label="Site boundary map">
+        <fg-map
+          [features]="mapFeatures()"
+          [selectedFeatureId]="selectedSite()?.id ?? null"
+          (geometryCreated)="handleGeometryCreated($event)"
+          (geometryEdited)="handleGeometryEdited($event)"
+          (geometryDeleted)="handleGeometryDeleted($event)"
+          (featureSelected)="handleMapSelection($event)"
+        />
       </section>
 
-      <aside class="details-panel">
+      <aside class="inspector-panel">
         @if (selectedSite(); as site) {
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Selected site</p>
-              <h2>{{ site.name }}</h2>
-            </div>
+          <div class="inspector-heading">
+            <p class="eyebrow">Site inspector</p>
+            <h2>{{ site.name }}</h2>
+            <span class="status-pill">
+              <i aria-hidden="true"></i>
+              Ready
+            </span>
           </div>
 
           <dl class="site-facts">
             <div>
+              <dt>Site status</dt>
+              <dd>Active</dd>
+            </div>
+            <div>
               <dt>Created</dt>
-              <dd>{{ site.createdAtUtc | date: 'medium' }}</dd>
+              <dd>{{ site.createdAtUtc | date: 'mediumDate' }}</dd>
             </div>
             <div>
-              <dt>Geometry</dt>
-              <dd>{{ site.boundary.type }}</dd>
+              <dt>Geometry status</dt>
+              <dd class="geometry-valid">
+                <span aria-hidden="true">✓</span>
+                Valid polygon
+              </dd>
             </div>
             <div>
-              <dt>Rings</dt>
-              <dd>{{ site.boundary.coordinates.length }}</dd>
+              <dt>Boundary detail</dt>
+              <dd>
+                {{ site.boundary.coordinates.length }}
+                {{
+                  site.boundary.coordinates.length === 1 ? 'ring' : 'rings'
+                }}
+                · {{ positionCount(site) }}
+                {{ positionCount(site) === 1 ? 'point' : 'points' }}
+              </dd>
             </div>
             <div>
-              <dt>Positions</dt>
-              <dd>{{ positionCount(site) }}</dd>
+              <dt>Coordinate system</dt>
+              <dd>WGS 84 · EPSG:4326</dd>
             </div>
           </dl>
 
-          <div class="site-id">
-            <span>Site ID</span>
-            <code>{{ site.id }}</code>
-          </div>
+          <p class="edit-hint">
+            Use the map edit tool to move boundary vertices.
+          </p>
 
-          <div class="details-actions">
+          <div class="inspector-actions">
             <a
               class="button button--secondary button--full"
               [routerLink]="['/sites', site.id]"
             >
-              View site details
+              Open site details
             </a>
             <button
               class="button button--danger button--full"
@@ -180,49 +231,43 @@
             </button>
           </div>
         } @else {
-          <div class="details-empty">
-            <span aria-hidden="true">◇</span>
+          <div class="inspector-empty">
+            <span aria-hidden="true">⬡</span>
             <h2>No site selected</h2>
-            <p>Select a site from the list to inspect its boundary details.</p>
+            <p>Select a site from the list or click its boundary on the map.</p>
           </div>
         }
       </aside>
     </section>
   }
 
-  @if (createPanelOpen()) {
-    <div class="modal-backdrop" (click)="closeCreatePanel()">
+  @if (createModalOpen()) {
+    <div class="modal-backdrop">
       <section
-        class="create-panel"
+        class="create-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-site-title"
-        (click)="$event.stopPropagation()"
       >
-        <div class="create-panel__heading">
+        <div class="create-modal__heading">
           <div>
-            <p class="eyebrow">New boundary</p>
-            <h2 id="create-site-title">Create a site</h2>
+            <p class="eyebrow">New site</p>
+            <h2 id="create-site-title">Save drawn boundary</h2>
           </div>
           <button
             class="icon-button"
             type="button"
             aria-label="Close create site form"
             [disabled]="submitting()"
-            (click)="closeCreatePanel()"
+            (click)="closeCreateModal()"
           >
             ×
           </button>
         </div>
 
-        <p class="create-panel__intro">
-          Paste a GeoJSON Polygon for now. Drawing tools will replace this
-          temporary form in a later phase.
-        </p>
-
         <form [formGroup]="siteForm" (ngSubmit)="createSite()">
-          <div class="form-field">
-            <label for="site-name">Site name</label>
+          <label class="form-field" for="site-name">
+            <span>Site name</span>
             <input
               id="site-name"
               type="text"
@@ -230,30 +275,25 @@
               placeholder="Example: North Avenue candidate"
               autocomplete="off"
             />
-            @if (
-              siteForm.controls.name.touched && siteForm.controls.name.invalid
-            ) {
-              <p class="field-error">
-                Enter a site name of up to 200 characters.
-              </p>
-            }
-          </div>
-
-          <div class="form-field">
-            <div class="field-label-row">
-              <label for="site-boundary">Boundary GeoJSON</label>
-              <span>EPSG:4326</span>
-            </div>
-            <textarea
-              id="site-boundary"
-              formControlName="boundary"
-              rows="14"
-              spellcheck="false"
-            ></textarea>
-            <p class="field-hint">
-              Positions use <code>[longitude, latitude]</code>. The first and
-              last positions in each ring must match.
+          </label>
+          @if (
+            siteForm.controls.name.touched && siteForm.controls.name.invalid
+          ) {
+            <p class="field-error">
+              Enter a site name of up to 200 characters.
             </p>
+          }
+
+          <div class="boundary-status">
+            <span class="boundary-status__icon" aria-hidden="true">✓</span>
+            <div>
+              <strong>Boundary ready</strong>
+              <p>
+                Polygon drawn in WGS 84 with
+                {{ pendingBoundary()?.coordinates?.[0]?.length ?? 0 }}
+                coordinate positions.
+              </p>
+            </div>
           </div>
 
           @if (createErrorMessage()) {
@@ -265,7 +305,7 @@
               class="button button--secondary"
               type="button"
               [disabled]="submitting()"
-              (click)="closeCreatePanel()"
+              (click)="closeCreateModal()"
             >
               Cancel
             </button>
@@ -274,7 +314,7 @@
               type="submit"
               [disabled]="submitting()"
             >
-              {{ submitting() ? 'Creating site…' : 'Create site' }}
+              {{ submitting() ? 'Saving site…' : 'Save Site' }}
             </button>
           </div>
         </form>

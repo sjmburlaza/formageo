@@ -1,0 +1,78 @@
+<section
+  class="fg-map-shell"
+  tabindex="0"
+  aria-label="Interactive site map"
+  (keydown)="handleKeydown($event)"
+>
+  <div #mapCanvas class="fg-map-canvas"></div>
+
+  <div class="fg-map-tools" aria-label="Geometry tools">
+    <button
+      class="fg-map-tool"
+      type="button"
+      [class.fg-map-tool--active]="mode() === 'drawing'"
+      [attr.aria-pressed]="mode() === 'drawing'"
+      aria-label="Draw polygon"
+      title="Draw polygon"
+      (click)="mode() === 'drawing' ? cancelDrawing() : startDrawing()"
+    >
+      <span aria-hidden="true">⬡</span>
+    </button>
+    <button
+      class="fg-map-tool"
+      type="button"
+      [class.fg-map-tool--active]="mode() === 'editing'"
+      [attr.aria-pressed]="mode() === 'editing'"
+      [disabled]="!selectedFeatureIdSignal()"
+      aria-label="Edit selected polygon"
+      title="Edit selected polygon"
+      (click)="mode() === 'editing' ? stopEditing() : editSelected()"
+    >
+      <span aria-hidden="true">⌁</span>
+    </button>
+    <button
+      class="fg-map-tool fg-map-tool--danger"
+      type="button"
+      [disabled]="!selectedFeatureIdSignal()"
+      aria-label="Delete selected polygon"
+      title="Delete selected polygon"
+      (click)="requestSelectedFeatureRemoval()"
+    >
+      <span aria-hidden="true">⌫</span>
+    </button>
+  </div>
+
+  <label class="fg-basemap-select">
+    <span>Base map</span>
+    <select
+      aria-label="Select base map"
+      [value]="activeBaseMap()"
+      (change)="changeBaseMap($event)"
+    >
+      @for (baseMap of baseMaps; track baseMap.id) {
+        <option [value]="baseMap.id">{{ baseMap.label }}</option>
+      }
+    </select>
+  </label>
+
+  @if (!mapReady()) {
+    <div class="fg-map-loading" aria-live="polite">
+      <span></span>
+      Loading map…
+    </div>
+  }
+
+  @if (mode() === 'drawing') {
+    <div class="fg-map-instructions" role="status">
+      <strong>Draw a site boundary</strong>
+      <span>Click to add points · Double-click or press Enter to finish</span>
+      <button type="button" (click)="cancelDrawing()">Cancel</button>
+    </div>
+  } @else if (mode() === 'editing') {
+    <div class="fg-map-instructions" role="status">
+      <strong>Edit boundary</strong>
+      <span>Drag a white vertex to reshape the polygon</span>
+      <button type="button" (click)="stopEditing()">Done</button>
+    </div>
+  }
+</section>

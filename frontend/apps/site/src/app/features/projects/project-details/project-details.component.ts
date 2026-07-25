@@ -1,11 +1,14 @@
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   inject,
   OnInit,
   signal,
+  ViewChild,
 } from '@angular/core';
 import {
   FormControl,
@@ -20,37 +23,27 @@ import {
   SitesApiService,
 } from '@frontend/api-client';
 import {
-  GeoJsonPolygon,
-  GeoJsonPosition,
-  Project,
-  Site,
-} from '@frontend/models';
-import { forkJoin, finalize } from 'rxjs';
+  MapComponent,
+  MapFeature,
+  MapFeatureSelectionEvent,
+  MapGeometryEvent,
+} from '@frontend/map';
+import { GeoJsonPolygon, Project, Site } from '@frontend/models';
+import { finalize, forkJoin } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-
-const DEFAULT_BOUNDARY = `{
-  "type": "Polygon",
-  "coordinates": [
-    [
-      [121.0301, 14.6501],
-      [121.0312, 14.6501],
-      [121.0312, 14.6512],
-      [121.0301, 14.6512],
-      [121.0301, 14.6501]
-    ]
-  ]
-}`;
 
 @Component({
   selector: 'fg-project-details',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, MapComponent, ReactiveFormsModule, RouterLink],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectDetailsComponent implements OnInit {
+  @ViewChild(MapComponent)
+  private mapComponent?: MapComponent;
+
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectsApi = inject(ProjectsApiService);
@@ -62,18 +55,43 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
   protected readonly deletingSiteId = signal<string | null>(null);
-  protected readonly createPanelOpen = signal(false);
+  protected readonly createModalOpen = signal(false);
+  protected readonly pendingBoundary = signal<GeoJsonPolygon | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly createErrorMessage = signal<string | null>(null);
+  protected readonly searchQuery = signal('');
+  protected readonly hiddenSiteIds = signal<ReadonlySet<string>>(new Set());
+
+  protected readonly filteredSites = computed(() => {
+    const query = this.searchQuery().trim().toLocaleLowerCase();
+
+    if (!query) {
+      return this.sites();
+    }
+
+    return this.sites().filter((site) =>
+      site.name.toLocaleLowerCase().includes(query),
+    );
+  });
+
+  protected readonly mapFeatures = computed<MapFeature[]>(() => {
+    const hiddenIds = this.hiddenSiteIds();
+
+    return this.sites().map((site) => ({
+      id: site.id,
+      geometry: site.boundary,
+      visible: !hiddenIds.has(site.id),
+      properties: {
+        name: site.name,
+        createdAtUtc: site.createdAtUtc,
+      },
+    }));
+  });
 
   protected readonly siteForm = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(200)],
-    }),
-    boundary: new FormControl(DEFAULT_BOUNDARY, {
-      nonNullable: true,
-      validators: [Validators.required],
     }),
   });
 
@@ -87,35 +105,38 @@ export class ProjectDetailsComponent implements OnInit {
       .subscribe((projectId) => this.loadWorkspace(projectId));
   }
 
-  protected selectSite(site: Site): void {
-    this.selectedSite.set(site);
-  }
-
-  protected openCreatePanel(): void {
+  protected startDrawing(): void {
     this.createErrorMessage.set(null);
-    this.createPanelOpen.set(true);
+    this.pendingBoundary.set(null);
+    this.createModalOpen.set(false);
+    this.selectedSite.set(null);
+    this.mapComponent?.startDrawing();
   }
 
-  protected closeCreatePanel(): void {
+  protected handleGeometryCreated(event: MapGeometryEvent): void {
+    this.pendingBoundary.set(event.geometry);
+    this.siteForm.reset({ name: '' });
+    this.createErrorMessage.set(null);
+    this.createModalOpen.set(true);
+  }
+
+  protected closeCreateModal(): void {
     if (this.submitting()) {
       return;
     }
 
-    this.createPanelOpen.set(false);
+    this.createModalOpen.set(false);
+    this.pendingBoundary.set(null);
     this.createErrorMessage.set(null);
+    this.mapComponent?.clearDraft();
   }
 
   protected createSite(): void {
     const project = this.project();
+    const boundary = this.pendingBoundary();
 
-    if (!project || this.siteForm.invalid || this.submitting()) {
+    if (!project || !boundary || this.siteForm.invalid || this.submitting()) {
       this.siteForm.markAllAsTouched();
-      return;
-    }
-
-    const boundary = this.parseBoundary(this.siteForm.controls.boundary.value);
-
-    if (!boundary) {
       return;
     }
 
@@ -137,11 +158,11 @@ export class ProjectDetailsComponent implements OnInit {
               : currentProject,
           );
           this.selectedSite.set(site);
-          this.siteForm.reset({
-            name: '',
-            boundary: DEFAULT_BOUNDARY,
-          });
-          this.createPanelOpen.set(false);
+          this.siteForm.reset({ name: '' });
+          this.pendingBoundary.set(null);
+          this.createModalOpen.set(false);
+          this.mapComponent?.clearDraft();
+          setTimeout(() => this.mapComponent?.fitToGeometry(site.boundary));
         },
         error: (error: unknown) => {
           this.createErrorMessage.set(
@@ -149,6 +170,80 @@ export class ProjectDetailsComponent implements OnInit {
           );
         },
       });
+  }
+
+  protected selectSite(site: Site): void {
+    if (this.hiddenSiteIds().has(site.id)) {
+      this.hiddenSiteIds.update((ids) => {
+        const nextIds = new Set(ids);
+        nextIds.delete(site.id);
+        return nextIds;
+      });
+    }
+
+    this.selectedSite.set(site);
+    setTimeout(() => this.mapComponent?.fitToGeometry(site.boundary));
+  }
+
+  protected handleMapSelection(event: MapFeatureSelectionEvent): void {
+    const site = this.sites().find(
+      (candidate) => candidate.id === event.featureId,
+    );
+
+    if (site) {
+      this.selectSite(site);
+    }
+  }
+
+  protected handleGeometryEdited(event: MapGeometryEvent): void {
+    if (!event.featureId) {
+      return;
+    }
+
+    this.sites.update((sites) =>
+      sites.map((site) =>
+        site.id === event.featureId
+          ? { ...site, boundary: event.geometry }
+          : site,
+      ),
+    );
+
+    const selected = this.selectedSite();
+    if (selected?.id === event.featureId) {
+      this.selectedSite.set({
+        ...selected,
+        boundary: event.geometry,
+      });
+    }
+  }
+
+  protected handleGeometryDeleted(event: MapFeatureSelectionEvent): void {
+    const site = this.sites().find(
+      (candidate) => candidate.id === event.featureId,
+    );
+
+    if (site) {
+      this.deleteSite(site);
+    }
+  }
+
+  protected toggleSiteVisibility(site: Site, event: Event): void {
+    event.stopPropagation();
+    this.hiddenSiteIds.update((ids) => {
+      const nextIds = new Set(ids);
+
+      if (nextIds.has(site.id)) {
+        nextIds.delete(site.id);
+      } else {
+        nextIds.add(site.id);
+      }
+
+      return nextIds;
+    });
+  }
+
+  protected updateSearch(event: Event): void {
+    this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 
   protected deleteSite(site: Site): void {
@@ -172,6 +267,11 @@ export class ProjectDetailsComponent implements OnInit {
           this.sites.update((sites) =>
             sites.filter((candidate) => candidate.id !== site.id),
           );
+          this.hiddenSiteIds.update((ids) => {
+            const nextIds = new Set(ids);
+            nextIds.delete(site.id);
+            return nextIds;
+          });
           this.project.update((currentProject) =>
             currentProject
               ? {
@@ -217,6 +317,7 @@ export class ProjectDetailsComponent implements OnInit {
     this.project.set(null);
     this.sites.set([]);
     this.selectedSite.set(null);
+    this.hiddenSiteIds.set(new Set());
 
     forkJoin({
       project: this.projectsApi.getProject(projectId),
@@ -237,73 +338,5 @@ export class ProjectDetailsComponent implements OnInit {
           );
         },
       });
-  }
-
-  private parseBoundary(value: string): GeoJsonPolygon | null {
-    let candidate: unknown;
-
-    try {
-      candidate = JSON.parse(value);
-    } catch {
-      this.createErrorMessage.set(
-        'Boundary must be valid JSON. Check commas, quotes, and brackets.',
-      );
-      return null;
-    }
-
-    if (!this.isGeoJsonPolygon(candidate)) {
-      this.createErrorMessage.set(
-        'Enter a GeoJSON Polygon with closed rings and [longitude, latitude] positions.',
-      );
-      return null;
-    }
-
-    return candidate;
-  }
-
-  private isGeoJsonPolygon(value: unknown): value is GeoJsonPolygon {
-    if (
-      typeof value !== 'object' ||
-      value === null ||
-      !('type' in value) ||
-      value.type !== 'Polygon' ||
-      !('coordinates' in value) ||
-      !Array.isArray(value.coordinates) ||
-      value.coordinates.length === 0
-    ) {
-      return false;
-    }
-
-    return value.coordinates.every((ring) => {
-      if (!Array.isArray(ring) || ring.length < 4) {
-        return false;
-      }
-
-      const positionsAreValid = ring.every(
-        (position): position is GeoJsonPosition =>
-          Array.isArray(position) &&
-          position.length === 2 &&
-          position.every(
-            (coordinate) =>
-              typeof coordinate === 'number' && Number.isFinite(coordinate),
-          ) &&
-          position[0] >= -180 &&
-          position[0] <= 180 &&
-          position[1] >= -90 &&
-          position[1] <= 90,
-      );
-
-      if (!positionsAreValid) {
-        return false;
-      }
-
-      const firstPosition = ring[0];
-      const lastPosition = ring[ring.length - 1];
-
-      return (
-        firstPosition[0] === lastPosition[0] &&
-        firstPosition[1] === lastPosition[1]
-      );
-    });
   }
 }

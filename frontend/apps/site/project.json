@@ -21,6 +21,16 @@
           {
             "glob": "**/*",
             "input": "apps/site/public"
+          },
+          {
+            "glob": "maplibre-gl-worker.mjs",
+            "input": "node_modules/maplibre-gl/dist",
+            "output": "assets/maplibre"
+          },
+          {
+            "glob": "maplibre-gl-shared.mjs",
+            "input": "node_modules/maplibre-gl/dist",
+            "output": "assets/maplibre"
           }
         ],
         "styles": [
@@ -32,13 +42,13 @@
           "budgets": [
             {
               "type": "initial",
-              "maximumWarning": "500kb",
-              "maximumError": "1mb"
+              "maximumWarning": "1250kb",
+              "maximumError": "1500kb"
             },
             {
               "type": "anyComponentStyle",
-              "maximumWarning": "4kb",
-              "maximumError": "8kb"
+              "maximumWarning": "6kb",
+              "maximumError": "10kb"
             }
           ],
           "outputHashing": "all"

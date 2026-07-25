@@ -1,6 +1,7 @@
 using FormaGeo.Application.Sites.Contracts;
 using FormaGeo.Application.Sites.CreateSite;
 using FormaGeo.Application.Sites.GetProjectSites;
+using FormaGeo.Application.Sites.Mapping;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FormaGeo.Api.Controllers;
@@ -31,6 +32,7 @@ public sealed class ProjectSitesController : ControllerBase
         StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [RequestSizeLimit(1_048_576)]
     public async Task<ActionResult<SiteResponse>> CreateSiteAsync(
         Guid projectId,
         CreateSiteRequest request,
@@ -51,14 +53,30 @@ public sealed class ProjectSitesController : ControllerBase
         {
             return NotFound(new
             {
-                error = exception.Message
+                field = "projectId",
+                problem = "not_found",
+                message = exception.Message,
+                status = StatusCodes.Status404NotFound
+            });
+        }
+        catch (PolygonValidationException exception)
+        {
+            return BadRequest(new
+            {
+                field = "boundary",
+                problem = exception.Problem,
+                message = exception.Message,
+                status = StatusCodes.Status400BadRequest
             });
         }
         catch (ArgumentException exception)
         {
             return BadRequest(new
             {
-                error = exception.Message
+                field = exception.ParamName ?? "request",
+                problem = "validation_error",
+                message = exception.Message,
+                status = StatusCodes.Status400BadRequest
             });
         }
     }
