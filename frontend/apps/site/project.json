@@ -8,9 +8,7 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/site",
@@ -33,9 +31,7 @@
             "output": "assets/maplibre"
           }
         ],
-        "styles": [
-          "apps/site/src/styles.scss"
-        ]
+        "styles": ["apps/site/src/styles.scss"]
       },
       "configurations": {
         "production": {
@@ -47,8 +43,8 @@
             },
             {
               "type": "anyComponentStyle",
-              "maximumWarning": "6kb",
-              "maximumError": "10kb"
+              "maximumWarning": "12kb",
+              "maximumError": "14kb"
             }
           ],
           "outputHashing": "all"

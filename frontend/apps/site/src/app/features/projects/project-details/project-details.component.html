@@ -21,7 +21,11 @@
     </section>
   } @else {
     <header class="workspace-toolbar">
-      <a class="back-button" routerLink="/projects" aria-label="Back to projects">
+      <a
+        class="back-button"
+        routerLink="/projects"
+        aria-label="Back to projects"
+      >
         <span aria-hidden="true">←</span>
       </a>
 
@@ -54,11 +58,11 @@
       </nav>
     </header>
 
-    @if (errorMessage()) {
+    @if (apiErrorState()) {
       <div class="error-banner" role="alert">
         <span aria-hidden="true">!</span>
-        <p>{{ errorMessage() }}</p>
-        <button type="button" (click)="errorMessage.set(null)">Dismiss</button>
+        <p>{{ apiErrorState() }}</p>
+        <button type="button" (click)="apiErrorState.set(null)">Dismiss</button>
       </div>
     }
 
@@ -107,6 +111,7 @@
               <li
                 class="site-list-item"
                 [class.site-list-item--active]="selectedSite()?.id === site.id"
+                [class.site-list-item--archived]="site.status === 'Archived'"
               >
                 <button
                   class="visibility-button"
@@ -135,8 +140,13 @@
                   <span class="site-copy">
                     <strong>{{ site.name }}</strong>
                     <small>
+                      {{ site.status }} ·
                       {{ site.boundary.coordinates.length }}
-                      {{ site.boundary.coordinates.length === 1 ? 'ring' : 'rings' }}
+                      {{
+                        site.boundary.coordinates.length === 1
+                          ? 'ring'
+                          : 'rings'
+                      }}
                     </small>
                   </span>
                   @if (selectedSite()?.id === site.id) {
@@ -163,6 +173,7 @@
           (geometryEdited)="handleGeometryEdited($event)"
           (geometryDeleted)="handleGeometryDeleted($event)"
           (featureSelected)="handleMapSelection($event)"
+          (modeChanged)="handleMapModeChanged($event)"
         />
       </section>
 
@@ -171,65 +182,301 @@
           <div class="inspector-heading">
             <p class="eyebrow">Site inspector</p>
             <h2>{{ site.name }}</h2>
-            <span class="status-pill">
+            <span
+              class="status-pill"
+              [class.status-pill--archived]="site.status === 'Archived'"
+            >
               <i aria-hidden="true"></i>
-              Ready
+              {{ site.status }}
             </span>
           </div>
 
-          <dl class="site-facts">
-            <div>
-              <dt>Site status</dt>
-              <dd>Active</dd>
-            </div>
-            <div>
-              <dt>Created</dt>
-              <dd>{{ site.createdAtUtc | date: 'mediumDate' }}</dd>
-            </div>
-            <div>
-              <dt>Geometry status</dt>
-              <dd class="geometry-valid">
-                <span aria-hidden="true">✓</span>
-                Valid polygon
-              </dd>
-            </div>
-            <div>
-              <dt>Boundary detail</dt>
-              <dd>
-                {{ site.boundary.coordinates.length }}
-                {{
-                  site.boundary.coordinates.length === 1 ? 'ring' : 'rings'
-                }}
-                · {{ positionCount(site) }}
-                {{ positionCount(site) === 1 ? 'point' : 'points' }}
-              </dd>
-            </div>
-            <div>
-              <dt>Coordinate system</dt>
-              <dd>WGS 84 · EPSG:4326</dd>
-            </div>
-          </dl>
+          <nav class="inspector-tabs" aria-label="Site inspector sections">
+            @for (
+              tab of ['overview', 'boundary', 'analysis', 'history'];
+              track tab
+            ) {
+              <button
+                type="button"
+                [class.inspector-tab--active]="activeInspectorTab() === tab"
+                (click)="selectInspectorTab($any(tab))"
+              >
+                {{ tab | titlecase }}
+              </button>
+            }
+          </nav>
 
-          <p class="edit-hint">
-            Use the map edit tool to move boundary vertices.
-          </p>
+          <div class="inspector-content">
+            @if (activeInspectorTab() === 'overview') {
+              <section
+                class="inspector-section"
+                aria-labelledby="overview-title"
+              >
+                <h3 id="overview-title" class="visually-hidden">Overview</h3>
 
-          <div class="inspector-actions">
-            <a
-              class="button button--secondary button--full"
-              [routerLink]="['/sites', site.id]"
-            >
-              Open site details
-            </a>
-            <button
-              class="button button--danger button--full"
-              type="button"
-              [disabled]="deletingSiteId() === site.id"
-              (click)="deleteSite(site)"
-            >
-              {{ deletingSiteId() === site.id ? 'Deleting…' : 'Delete site' }}
-            </button>
+                @if (renaming()) {
+                  <form
+                    class="rename-form"
+                    (ngSubmit)="saveRename(site)"
+                    aria-label="Rename site"
+                  >
+                    <label for="rename-site">Site name</label>
+                    <input
+                      id="rename-site"
+                      type="text"
+                      [formControl]="renameControl"
+                      maxlength="200"
+                      autocomplete="off"
+                    />
+                    @if (renameControl.touched && renameControl.invalid) {
+                      <p class="field-error">
+                        Enter a site name of up to 200 characters.
+                      </p>
+                    }
+                    <div class="compact-actions">
+                      <button
+                        class="button button--secondary"
+                        type="button"
+                        [disabled]="isSaving(site.id)"
+                        (click)="cancelRenaming()"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        class="button button--primary"
+                        type="submit"
+                        [disabled]="isSaving(site.id)"
+                      >
+                        {{
+                          isSaving(site.id, 'rename') ? 'Saving…' : 'Save name'
+                        }}
+                      </button>
+                    </div>
+                  </form>
+                } @else {
+                  <dl class="site-facts">
+                    <div>
+                      <dt>Site name</dt>
+                      <dd>{{ site.name }}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{{ site.status }}</dd>
+                    </div>
+                    <div>
+                      <dt>Created</dt>
+                      <dd>{{ site.createdAtUtc | date: 'medium' }}</dd>
+                    </div>
+                    <div>
+                      <dt>Last updated</dt>
+                      <dd>{{ site.updatedAtUtc | date: 'medium' }}</dd>
+                    </div>
+                  </dl>
+                }
+
+                <div class="inspector-actions">
+                  @if (!renaming()) {
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      [disabled]="isSaving(site.id)"
+                      (click)="startRenaming(site)"
+                    >
+                      Rename site
+                    </button>
+                  }
+
+                  @if (site.status === 'Archived') {
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      [disabled]="isSaving(site.id)"
+                      (click)="restoreSite(site)"
+                    >
+                      {{
+                        isSaving(site.id, 'restore')
+                          ? 'Restoring…'
+                          : 'Restore site'
+                      }}
+                    </button>
+                  } @else {
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      [disabled]="isSaving(site.id)"
+                      (click)="archiveSite(site)"
+                    >
+                      {{
+                        isSaving(site.id, 'archive')
+                          ? 'Archiving…'
+                          : 'Archive site'
+                      }}
+                    </button>
+                  }
+
+                  <button
+                    class="button button--danger button--full"
+                    type="button"
+                    [disabled]="isSaving(site.id)"
+                    (click)="deleteSite(site)"
+                  >
+                    {{
+                      isSaving(site.id, 'delete') ? 'Deleting…' : 'Delete site'
+                    }}
+                  </button>
+                </div>
+              </section>
+            } @else if (activeInspectorTab() === 'boundary') {
+              <section
+                class="inspector-section"
+                aria-labelledby="boundary-title"
+              >
+                <h3 id="boundary-title" class="visually-hidden">Boundary</h3>
+                <dl class="site-facts">
+                  <div>
+                    <dt>Geometry type</dt>
+                    <dd>{{ site.boundary.type }}</dd>
+                  </div>
+                  <div>
+                    <dt>Coordinate system</dt>
+                    <dd>WGS 84 · EPSG:4326</dd>
+                  </div>
+                  <div>
+                    <dt>Validity</dt>
+                    <dd class="geometry-valid">
+                      <span aria-hidden="true">✓</span>
+                      {{
+                        hasUnsavedGeometry() && editingSiteId() === site.id
+                          ? 'Pending save validation'
+                          : 'Valid polygon'
+                      }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Boundary detail</dt>
+                    <dd>
+                      {{ site.boundary.coordinates.length }}
+                      {{
+                        site.boundary.coordinates.length === 1
+                          ? 'ring'
+                          : 'rings'
+                      }}
+                      · {{ positionCount(site) }}
+                      {{ positionCount(site) === 1 ? 'point' : 'points' }}
+                    </dd>
+                  </div>
+                </dl>
+
+                @if (editingSiteId() === site.id) {
+                  <div
+                    class="edit-state"
+                    [class.edit-state--dirty]="hasUnsavedGeometry()"
+                    role="status"
+                  >
+                    <strong>
+                      {{
+                        hasUnsavedGeometry()
+                          ? 'Unsaved boundary changes'
+                          : 'Boundary editing active'
+                      }}
+                    </strong>
+                    <p>
+                      {{
+                        hasUnsavedGeometry()
+                          ? 'Save to keep the new vertex positions, or cancel to restore the saved boundary.'
+                          : 'Drag a white vertex on the map to reshape this site.'
+                      }}
+                    </p>
+                  </div>
+
+                  <div class="inspector-actions">
+                    <button
+                      class="button button--primary button--full"
+                      type="button"
+                      [disabled]="!hasUnsavedGeometry() || isSaving(site.id)"
+                      (click)="saveBoundaryChanges()"
+                    >
+                      {{
+                        isSaving(site.id, 'boundary')
+                          ? 'Saving boundary…'
+                          : 'Save changes'
+                      }}
+                    </button>
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      [disabled]="isSaving(site.id)"
+                      (click)="cancelBoundaryEditing()"
+                    >
+                      Cancel editing
+                    </button>
+                  </div>
+                } @else {
+                  @if (site.status === 'Archived') {
+                    <p class="edit-hint">
+                      Restore this site before changing its boundary.
+                    </p>
+                  }
+                  <div class="inspector-actions">
+                    <button
+                      class="button button--primary button--full"
+                      type="button"
+                      [disabled]="site.status === 'Archived'"
+                      (click)="startBoundaryEditing(site)"
+                    >
+                      Edit boundary
+                    </button>
+                    <button
+                      class="button button--secondary button--full"
+                      type="button"
+                      (click)="downloadGeoJson(site)"
+                    >
+                      Download GeoJSON
+                    </button>
+                  </div>
+                }
+              </section>
+            } @else if (activeInspectorTab() === 'analysis') {
+              <section class="tab-empty">
+                <span aria-hidden="true">◫</span>
+                <h3>Analysis</h3>
+                <p>Site analysis results will appear here when available.</p>
+              </section>
+            } @else {
+              <section class="inspector-section">
+                <ol class="history-list">
+                  @if (site.archivedAtUtc) {
+                    <li>
+                      <i aria-hidden="true"></i>
+                      <div>
+                        <strong>Site archived</strong>
+                        <span>{{ site.archivedAtUtc | date: 'medium' }}</span>
+                      </div>
+                    </li>
+                  }
+                  <li>
+                    <i aria-hidden="true"></i>
+                    <div>
+                      <strong>Last updated</strong>
+                      <span>{{ site.updatedAtUtc | date: 'medium' }}</span>
+                    </div>
+                  </li>
+                  <li>
+                    <i aria-hidden="true"></i>
+                    <div>
+                      <strong>Site created</strong>
+                      <span>{{ site.createdAtUtc | date: 'medium' }}</span>
+                    </div>
+                  </li>
+                </ol>
+              </section>
+            }
           </div>
+
+          <a class="inspector-detail-link" [routerLink]="['/sites', site.id]">
+            Open full site record
+            <span aria-hidden="true">→</span>
+          </a>
         } @else {
           <div class="inspector-empty">
             <span aria-hidden="true">⬡</span>

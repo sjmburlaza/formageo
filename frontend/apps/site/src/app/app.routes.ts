@@ -11,6 +11,9 @@ export const appRoutes: Routes = [
   {
     path: 'projects/:projectId',
     component: ProjectDetailsComponent,
+    canDeactivate: [
+      (component: ProjectDetailsComponent) => component.canDeactivate(),
+    ],
   },
   {
     path: 'sites/:siteId',

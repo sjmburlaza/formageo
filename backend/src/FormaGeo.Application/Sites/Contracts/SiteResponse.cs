@@ -8,7 +8,10 @@ public sealed record SiteResponse(
     Guid ProjectId,
     string Name,
     GeoJsonPolygonResponse Boundary,
-    DateTimeOffset CreatedAtUtc)
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    SiteStatus Status,
+    DateTimeOffset? ArchivedAtUtc)
 {
     public static SiteResponse FromDomain(Site site)
     {
@@ -17,6 +20,9 @@ public sealed record SiteResponse(
             site.ProjectId,
             site.Name,
             GeoJsonPolygonMapper.ToResponse(site.Boundary),
-            site.CreatedAtUtc);
+            site.CreatedAtUtc,
+            site.UpdatedAtUtc,
+            site.Status,
+            site.ArchivedAtUtc);
     }
 }

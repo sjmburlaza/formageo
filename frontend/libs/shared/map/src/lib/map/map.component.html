@@ -23,7 +23,7 @@
       type="button"
       [class.fg-map-tool--active]="mode() === 'editing'"
       [attr.aria-pressed]="mode() === 'editing'"
-      [disabled]="!selectedFeatureIdSignal()"
+      [disabled]="!selectedFeatureIdSignal() || !selectedFeatureEditable()"
       aria-label="Edit selected polygon"
       title="Edit selected polygon"
       (click)="mode() === 'editing' ? stopEditing() : editSelected()"

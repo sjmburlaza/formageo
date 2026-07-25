@@ -36,6 +36,19 @@ public sealed class SiteConfiguration
             .HasColumnName("created_at_utc")
             .IsRequired();
 
+        builder.Property(site => site.UpdatedAtUtc)
+            .HasColumnName("updated_at_utc")
+            .IsRequired();
+
+        builder.Property(site => site.Status)
+            .HasColumnName("status")
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.Property(site => site.ArchivedAtUtc)
+            .HasColumnName("archived_at_utc");
+
         builder.HasOne<Project>()
             .WithMany()
             .HasForeignKey(site => site.ProjectId)

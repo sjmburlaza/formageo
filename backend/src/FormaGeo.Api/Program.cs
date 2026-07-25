@@ -1,12 +1,17 @@
 using FormaGeo.Application.Projects.CreateProject;
 using FormaGeo.Application.Projects.GetProject;
 using FormaGeo.Application.Projects.GetProjects;
+using FormaGeo.Application.Sites.ArchiveSite;
 using FormaGeo.Application.Sites.CreateSite;
 using FormaGeo.Application.Sites.DeleteSite;
 using FormaGeo.Application.Sites.GetProjectSites;
 using FormaGeo.Application.Sites.GetSite;
+using FormaGeo.Application.Sites.RestoreSite;
+using FormaGeo.Application.Sites.UpdateSite;
+using FormaGeo.Application.Sites.UpdateSiteBoundary;
 using FormaGeo.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +25,11 @@ builder.WebHost.ConfigureKestrel(options =>
 
 builder.Services
     .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter());
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
         options.InvalidModelStateResponseFactory = context =>
@@ -64,6 +74,10 @@ builder.Services.AddScoped<CreateSiteHandler>();
 builder.Services.AddScoped<GetProjectSitesHandler>();
 builder.Services.AddScoped<GetSiteHandler>();
 builder.Services.AddScoped<DeleteSiteHandler>();
+builder.Services.AddScoped<UpdateSiteHandler>();
+builder.Services.AddScoped<UpdateSiteBoundaryHandler>();
+builder.Services.AddScoped<ArchiveSiteHandler>();
+builder.Services.AddScoped<RestoreSiteHandler>();
 
 builder.Services.AddCors(options =>
 {

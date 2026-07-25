@@ -12,6 +12,10 @@ public interface ISiteRepository
         Guid siteId,
         CancellationToken cancellationToken = default);
 
+    Task<Site?> GetForUpdateAsync(
+        Guid siteId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Site>> GetByProjectIdAsync(
         Guid projectId,
         CancellationToken cancellationToken = default);
@@ -23,5 +27,8 @@ public interface ISiteRepository
 
     Task<bool> DeleteAsync(
         Guid siteId,
+        CancellationToken cancellationToken = default);
+
+    Task SaveChangesAsync(
         CancellationToken cancellationToken = default);
 }

@@ -35,6 +35,16 @@ public sealed class SiteRepository : ISiteRepository
                 cancellationToken);
     }
 
+    public Task<Site?> GetForUpdateAsync(
+        Guid siteId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Sites
+            .SingleOrDefaultAsync(
+                site => site.Id == siteId,
+                cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Site>>
         GetByProjectIdAsync(
             Guid projectId,
@@ -94,5 +104,11 @@ public sealed class SiteRepository : ISiteRepository
             cancellationToken);
 
         return true;
+    }
+
+    public async Task SaveChangesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

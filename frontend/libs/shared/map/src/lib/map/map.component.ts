@@ -237,6 +237,10 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  protected selectedFeatureEditable(): boolean {
+    return this.getSelectedFeature()?.properties?.['status'] !== 'Archived';
+  }
+
   protected handleKeydown(event: KeyboardEvent): void {
     if (this.mode() === 'drawing') {
       if (event.key === 'Escape') {
@@ -379,8 +383,18 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       type: 'fill',
       source: FEATURES_SOURCE,
       paint: {
-        'fill-color': '#2f7d4b',
-        'fill-opacity': 0.38,
+        'fill-color': [
+          'case',
+          ['==', ['get', 'status'], 'Archived'],
+          '#7e8982',
+          '#2f7d4b',
+        ],
+        'fill-opacity': [
+          'case',
+          ['==', ['get', 'status'], 'Archived'],
+          0.2,
+          0.38,
+        ],
       },
     });
     this.map.addLayer({
@@ -388,7 +402,12 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       type: 'line',
       source: FEATURES_SOURCE,
       paint: {
-        'line-color': '#21633a',
+        'line-color': [
+          'case',
+          ['==', ['get', 'status'], 'Archived'],
+          '#69736d',
+          '#21633a',
+        ],
         'line-width': 2,
       },
     });
@@ -635,8 +654,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     this.modeChanged.emit(mode);
 
     if (this.map) {
-      this.map.getCanvas().style.cursor =
-        mode === 'drawing' ? 'crosshair' : '';
+      this.map.getCanvas().style.cursor = mode === 'drawing' ? 'crosshair' : '';
     }
   }
 
@@ -747,11 +765,11 @@ export class MapComponent implements AfterViewInit, OnDestroy {
     }
 
     const selectedId = this.selectedFeatureIdValue ?? '';
-    const filter: [
+    const filter: ['==', ['get', string], string] = [
       '==',
-      ['get', string],
-      string,
-    ] = ['==', ['get', 'id'], selectedId];
+      ['get', 'id'],
+      selectedId,
+    ];
 
     this.map.setFilter(SELECTED_FILL_LAYER, filter);
     this.map.setFilter(SELECTED_OUTLINE_LAYER, filter);
@@ -796,9 +814,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   private getGeoJsonSource(id: string): GeoJSONSource | undefined {
     const source = this.map?.getSource(id);
-    return source?.type === 'geojson'
-      ? (source as GeoJSONSource)
-      : undefined;
+    return source?.type === 'geojson' ? (source as GeoJSONSource) : undefined;
   }
 
   private fitToVisibleFeatures(): void {

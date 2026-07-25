@@ -95,6 +95,13 @@ public sealed class GetProjectHandlerTests
             return Task.FromResult<Site?>(null);
         }
 
+        public Task<Site?> GetForUpdateAsync(
+            Guid siteId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<Site?>(null);
+        }
+
         public Task<IReadOnlyList<Site>> GetByProjectIdAsync(
             Guid projectId,
             CancellationToken cancellationToken = default)
@@ -117,6 +124,12 @@ public sealed class GetProjectHandlerTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(false);
+        }
+
+        public Task SaveChangesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
         }
     }
 }
