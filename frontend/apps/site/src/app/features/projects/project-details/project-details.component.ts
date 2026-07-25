@@ -55,6 +55,8 @@ import {
   formatCoordinate,
   formatPerimeter,
 } from './site-summary-formatters';
+import { SiteImportWizardComponent } from '../../sites/site-import/site-import-wizard.component';
+import { SiteImportCompletedEvent } from '../../sites/site-import/site-import.models';
 
 type InspectorTab = 'overview' | 'boundary' | 'analysis' | 'history';
 type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
@@ -81,6 +83,7 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
     MapComponent,
     ReactiveFormsModule,
     RouterLink,
+    SiteImportWizardComponent,
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -119,6 +122,7 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
   protected readonly createModalOpen = signal(false);
+  protected readonly importWizardOpen = signal(false);
   protected readonly pendingBoundary = signal<GeoJsonPolygon | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly apiErrorState = signal<string | null>(null);
@@ -217,6 +221,57 @@ export class ProjectDetailsComponent implements OnInit {
     this.createModalOpen.set(false);
     this.selectedSiteId.set(null);
     this.mapComponent?.startDrawing();
+  }
+
+  protected openImportWizard(): void {
+    if (!this.confirmDiscardGeometry('Open the boundary importer')) {
+      return;
+    }
+
+    this.discardBoundaryDraft();
+    this.importWizardOpen.set(true);
+  }
+
+  protected closeImportWizard(): void {
+    this.importWizardOpen.set(false);
+  }
+
+  protected handleImportCompleted(
+    event: SiteImportCompletedEvent,
+  ): void {
+    const project = this.project();
+
+    if (
+      !project ||
+      event.targetProjectId !== project.id ||
+      event.result.importedSites.length === 0
+    ) {
+      return;
+    }
+
+    const importedIds = new Set(
+      event.result.importedSites.map((site) => site.id),
+    );
+    this.sites.update((sites) => [
+      ...event.result.importedSites,
+      ...sites.filter((site) => !importedIds.has(site.id)),
+    ]);
+    this.project.update((currentProject) =>
+      currentProject
+        ? {
+            ...currentProject,
+            siteCount:
+              currentProject.siteCount +
+              event.result.importedSites.length,
+          }
+        : currentProject,
+    );
+    const firstImportedSite = event.result.importedSites[0];
+    this.selectedSiteId.set(firstImportedSite.id);
+    this.loadSiteSummary(firstImportedSite.id);
+    setTimeout(() =>
+      this.mapComponent?.fitToGeometry(firstImportedSite.boundary),
+    );
   }
 
   protected handleGeometryCreated(event: MapGeometryEvent): void {
@@ -616,30 +671,31 @@ export class ProjectDetailsComponent implements OnInit {
   }
 
   protected downloadGeoJson(site: Site): void {
-    const feature = {
-      type: 'Feature',
-      properties: {
-        id: site.id,
-        name: site.name,
-        status: site.status,
-        coordinateSystem: 'EPSG:4326',
-      },
-      geometry: site.boundary,
-    };
-    const blob = new Blob([JSON.stringify(feature, null, 2)], {
-      type: 'application/geo+json',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const filename = site.name
-      .toLocaleLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+    this.apiErrorState.set(null);
 
-    link.href = url;
-    link.download = `${filename || 'site'}-boundary.geojson`;
-    link.click();
-    URL.revokeObjectURL(url);
+    this.sitesApi.exportSiteGeoJson(site.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const filename = site.name
+          .toLocaleLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+
+        link.href = url;
+        link.download = `${filename || 'site'}-boundary.geojson`;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (error: unknown) => {
+        this.apiErrorState.set(
+          getApiErrorMessage(
+            error,
+            'The Site could not be exported.',
+          ),
+        );
+      },
+    });
   }
 
   protected isSaving(siteId: string, action?: SavingAction): boolean {

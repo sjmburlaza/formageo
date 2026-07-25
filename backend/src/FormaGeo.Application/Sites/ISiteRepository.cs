@@ -8,6 +8,10 @@ public interface ISiteRepository
         Site site,
         CancellationToken cancellationToken = default);
 
+    Task AddRangeAsync(
+        IEnumerable<Site> sites,
+        CancellationToken cancellationToken = default);
+
     Task<Site?> GetByIdAsync(
         Guid siteId,
         CancellationToken cancellationToken = default);

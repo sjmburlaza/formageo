@@ -43,7 +43,11 @@
           <svg lucidePenTool aria-hidden="true"></svg>
           Draw site
         </button>
-        <button class="toolbar-button" type="button" disabled>
+        <button
+          class="toolbar-button"
+          type="button"
+          (click)="openImportWizard()"
+        >
           <svg lucideUpload aria-hidden="true"></svg>
           Import boundary
         </button>
@@ -719,5 +723,15 @@
         </form>
       </section>
     </div>
+  }
+
+  @defer (when importWizardOpen()) {
+    @if (importWizardOpen()) {
+      <fg-site-import-wizard
+        [currentProjectId]="project()!.id"
+        (closed)="closeImportWizard()"
+        (completed)="handleImportCompleted($event)"
+      />
+    }
   }
 </main>

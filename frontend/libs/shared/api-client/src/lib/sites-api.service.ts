@@ -3,6 +3,8 @@ import { inject, Injectable } from '@angular/core';
 import {
   CreateSiteRequest,
   Site,
+  SiteImportOptions,
+  SiteImportResult,
   SiteSummary,
   UpdateSiteBoundaryRequest,
   UpdateSiteRequest,
@@ -27,6 +29,26 @@ export class SitesApiService {
   getProjectSites(projectId: string): Observable<Site[]> {
     return this.http.get<Site[]>(
       `${this.apiBaseUrl}/api/projects/${projectId}/sites`,
+    );
+  }
+
+  importSites(
+    projectId: string,
+    file: File,
+    options: SiteImportOptions,
+  ): Observable<SiteImportResult> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('namePattern', options.namePattern);
+    formData.append('mode', options.mode);
+
+    for (const featureIndex of options.selectedFeatureIndexes) {
+      formData.append('selectedFeatureIndexes', featureIndex.toString());
+    }
+
+    return this.http.post<SiteImportResult>(
+      `${this.apiBaseUrl}/api/projects/${projectId}/site-imports`,
+      formData,
     );
   }
 
@@ -73,5 +95,15 @@ export class SitesApiService {
 
   deleteSite(siteId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiBaseUrl}/api/sites/${siteId}`);
+  }
+
+  exportSiteGeoJson(siteId: string): Observable<Blob> {
+    return this.http.get(
+      `${this.apiBaseUrl}/api/sites/${siteId}/export`,
+      {
+        params: { format: 'geojson' },
+        responseType: 'blob',
+      },
+    );
   }
 }

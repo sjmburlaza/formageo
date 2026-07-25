@@ -31,6 +31,31 @@ export interface UpdateSiteBoundaryRequest {
   boundary: GeoJsonPolygon;
 }
 
+export type SiteImportMode = 'Separate' | 'Merge';
+
+export interface SiteImportOptions {
+  namePattern: string;
+  mode: SiteImportMode;
+  selectedFeatureIndexes: number[];
+}
+
+export interface SiteImportSkippedFeature {
+  featureIndex: number | null;
+  featureName: string | null;
+  reason: string;
+}
+
+export interface SiteImportResult {
+  importId: string;
+  projectId: string;
+  featureCount: number;
+  invalidFeatureCount: number;
+  detectedCoordinateSystem: string;
+  importedSites: Site[];
+  skippedFeatures: SiteImportSkippedFeature[];
+  warnings: string[];
+}
+
 export interface SiteSummary {
   siteId: string;
   geometry: SiteGeometrySummary;

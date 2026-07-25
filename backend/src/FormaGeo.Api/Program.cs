@@ -1,9 +1,11 @@
 using FormaGeo.Application.Projects.CreateProject;
 using FormaGeo.Application.Projects.GetProject;
 using FormaGeo.Application.Projects.GetProjects;
+using FormaGeo.Application.SiteImports;
 using FormaGeo.Application.Sites.ArchiveSite;
 using FormaGeo.Application.Sites.CreateSite;
 using FormaGeo.Application.Sites.DeleteSite;
+using FormaGeo.Application.Sites.ExportSite;
 using FormaGeo.Application.Sites.GetProjectSites;
 using FormaGeo.Application.Sites.GetSite;
 using FormaGeo.Application.Sites.GetSiteSummary;
@@ -16,7 +18,7 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-const long MaximumRequestBodySize = 1_048_576;
+const long MaximumRequestBodySize = 1_200_000;
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -80,6 +82,8 @@ builder.Services.AddScoped<UpdateSiteHandler>();
 builder.Services.AddScoped<UpdateSiteBoundaryHandler>();
 builder.Services.AddScoped<ArchiveSiteHandler>();
 builder.Services.AddScoped<RestoreSiteHandler>();
+builder.Services.AddScoped<ExportSiteHandler>();
+builder.Services.AddScoped<SiteImportService>();
 
 builder.Services.AddCors(options =>
 {

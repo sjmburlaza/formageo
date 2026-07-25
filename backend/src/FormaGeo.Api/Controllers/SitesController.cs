@@ -1,6 +1,7 @@
 using FormaGeo.Application.Sites.ArchiveSite;
 using FormaGeo.Application.Sites.Contracts;
 using FormaGeo.Application.Sites.DeleteSite;
+using FormaGeo.Application.Sites.ExportSite;
 using FormaGeo.Application.Sites.GetSite;
 using FormaGeo.Application.Sites.GetSiteSummary;
 using FormaGeo.Application.Sites.Mapping;
@@ -8,6 +9,8 @@ using FormaGeo.Application.Sites.RestoreSite;
 using FormaGeo.Application.Sites.UpdateSite;
 using FormaGeo.Application.Sites.UpdateSiteBoundary;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace FormaGeo.Api.Controllers;
 
@@ -23,6 +26,7 @@ public sealed class SitesController : ControllerBase
     private readonly UpdateSiteBoundaryHandler _updateSiteBoundaryHandler;
     private readonly ArchiveSiteHandler _archiveSiteHandler;
     private readonly RestoreSiteHandler _restoreSiteHandler;
+    private readonly ExportSiteHandler _exportSiteHandler;
 
     public SitesController(
         DeleteSiteHandler deleteSiteHandler,
@@ -31,7 +35,8 @@ public sealed class SitesController : ControllerBase
         UpdateSiteHandler updateSiteHandler,
         UpdateSiteBoundaryHandler updateSiteBoundaryHandler,
         ArchiveSiteHandler archiveSiteHandler,
-        RestoreSiteHandler restoreSiteHandler)
+        RestoreSiteHandler restoreSiteHandler,
+        ExportSiteHandler exportSiteHandler)
     {
         _deleteSiteHandler = deleteSiteHandler;
         _getSiteHandler = getSiteHandler;
@@ -40,6 +45,7 @@ public sealed class SitesController : ControllerBase
         _updateSiteBoundaryHandler = updateSiteBoundaryHandler;
         _archiveSiteHandler = archiveSiteHandler;
         _restoreSiteHandler = restoreSiteHandler;
+        _exportSiteHandler = exportSiteHandler;
     }
 
     [HttpGet("{siteId:guid}", Name = "GetSite")]
@@ -96,6 +102,59 @@ public sealed class SitesController : ControllerBase
         }
 
         return Ok(summary);
+    }
+
+    [HttpGet("{siteId:guid}/export", Name = "ExportSite")]
+    [EndpointSummary("Export a Site boundary")]
+    [EndpointDescription(
+        "Downloads a Site as an RFC 7946 GeoJSON Feature in WGS 84.")]
+    [Produces("application/geo+json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportSiteAsync(
+        Guid siteId,
+        [FromQuery] string format = "geojson",
+        CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(
+                format,
+                "geojson",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return ValidationError(
+                "format",
+                "unsupported_export_format",
+                "Only the 'geojson' export format is currently supported.");
+        }
+
+        var feature = await _exportSiteHandler.HandleAsync(
+            siteId,
+            cancellationToken);
+
+        if (feature is null)
+        {
+            return SiteNotFound(
+                $"Site '{siteId}' was not found.");
+        }
+
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        };
+        options.Converters.Add(
+            new JsonStringEnumConverter());
+        var content = JsonSerializer.SerializeToUtf8Bytes(
+            feature,
+            options);
+        var fileName = CreateExportFileName(
+            feature.Properties.Name);
+
+        return File(
+            content,
+            "application/geo+json",
+            fileName);
     }
 
     [HttpPatch("{siteId:guid}", Name = "UpdateSite")]
@@ -261,5 +320,25 @@ public sealed class SitesController : ControllerBase
             message,
             status = StatusCodes.Status400BadRequest
         });
+    }
+
+    private static string CreateExportFileName(string siteName)
+    {
+        var safeCharacters = siteName
+            .Trim()
+            .ToLowerInvariant()
+            .Select(character =>
+                char.IsAsciiLetterOrDigit(character)
+                    ? character
+                    : '-')
+            .ToArray();
+        var slug = string.Join(
+            '-',
+            new string(safeCharacters)
+                .Split(
+                    '-',
+                    StringSplitOptions.RemoveEmptyEntries));
+
+        return $"{(string.IsNullOrWhiteSpace(slug) ? "site" : slug)}-boundary.geojson";
     }
 }
