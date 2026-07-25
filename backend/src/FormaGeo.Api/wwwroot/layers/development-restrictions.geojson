@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Utility Easement Demonstration Area",
+        "restriction": "Setback and agency clearance required",
+        "reference": "DEMO-RES-01"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[121.022,14.559],[121.032,14.559],[121.032,14.570],[121.022,14.570],[121.022,14.559]]]
+      }
+    }
+  ]
+}

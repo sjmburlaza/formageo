@@ -34,6 +34,7 @@ import {
   MapOverlayStateChange,
 } from '@frontend/map';
 import {
+  AnalysisEvidenceResult,
   GeoJsonPolygon,
   LayerDefinition,
   Project,
@@ -114,6 +115,11 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly project = signal<Project | null>(null);
   protected readonly sites = signal<Site[]>([]);
   protected readonly layerOverlays = signal<MapOverlay[]>([]);
+  protected readonly analysisOverlays = signal<MapOverlay[]>([]);
+  protected readonly mapOverlays = computed(() => [
+    ...this.layerOverlays(),
+    ...this.analysisOverlays(),
+  ]);
   protected readonly selectedSiteId = signal<string | null>(null);
   protected readonly selectedSite = computed(
     () =>
@@ -255,9 +261,7 @@ export class ProjectDetailsComponent implements OnInit {
     this.importWizardOpen.set(false);
   }
 
-  protected handleImportCompleted(
-    event: SiteImportCompletedEvent,
-  ): void {
+  protected handleImportCompleted(event: SiteImportCompletedEvent): void {
     const project = this.project();
 
     if (
@@ -280,8 +284,7 @@ export class ProjectDetailsComponent implements OnInit {
         ? {
             ...currentProject,
             siteCount:
-              currentProject.siteCount +
-              event.result.importedSites.length,
+              currentProject.siteCount + event.result.importedSites.length,
           }
         : currentProject,
     );
@@ -365,6 +368,7 @@ export class ProjectDetailsComponent implements OnInit {
       this.discardBoundaryDraft();
       this.renaming.set(false);
       this.activeInspectorTab.set('overview');
+      this.analysisOverlays.set([]);
       this.mapComponent?.clearHighlightedPosition();
     }
 
@@ -456,9 +460,26 @@ export class ProjectDetailsComponent implements OnInit {
     this.activeInspectorTab.set('boundary');
   }
 
-  protected handleOverlayStateChanged(
-    change: MapOverlayStateChange,
-  ): void {
+  protected handleOverlayStateChanged(change: MapOverlayStateChange): void {
+    if (
+      this.analysisOverlays().some((overlay) => overlay.id === change.layerId)
+    ) {
+      this.analysisOverlays.update((overlays) =>
+        overlays.map((overlay) =>
+          overlay.id === change.layerId
+            ? {
+                ...overlay,
+                visible: change.visible,
+                opacity: change.opacity,
+                sortOrder: change.sortOrder,
+                filter: change.filter,
+              }
+            : overlay,
+        ),
+      );
+      return;
+    }
+
     this.layerOverlays.update((overlays) =>
       overlays.map((overlay) =>
         overlay.id === change.layerId
@@ -473,6 +494,20 @@ export class ProjectDetailsComponent implements OnInit {
       ),
     );
     this.scheduleLayerPreferenceSave();
+  }
+
+  protected handleAnalysisOverlaysChanged(overlays: MapOverlay[]): void {
+    this.analysisOverlays.set(overlays);
+  }
+
+  protected handleResultLayerRequested(result: AnalysisEvidenceResult): void {
+    const site = this.selectedSite();
+    if (site && result.resultGeometry) {
+      this.mapComponent?.fitToGeometry(site.boundary, {
+        padding: 96,
+        maxZoom: 16,
+      });
+    }
   }
 
   protected selectInspectorTab(tab: InspectorTab): void {
@@ -727,10 +762,7 @@ export class ProjectDetailsComponent implements OnInit {
       },
       error: (error: unknown) => {
         this.apiErrorState.set(
-          getApiErrorMessage(
-            error,
-            'The Site could not be exported.',
-          ),
+          getApiErrorMessage(error, 'The Site could not be exported.'),
         );
       },
     });
@@ -768,6 +800,7 @@ export class ProjectDetailsComponent implements OnInit {
     this.project.set(null);
     this.sites.set([]);
     this.layerOverlays.set([]);
+    this.analysisOverlays.set([]);
     this.selectedSiteId.set(null);
     this.siteSummary.set(null);
     this.summaryLoading.set(false);
@@ -787,9 +820,7 @@ export class ProjectDetailsComponent implements OnInit {
         next: ({ project, sites, layers, projectLayers }) => {
           this.project.set(project);
           this.sites.set(sites);
-          this.layerOverlays.set(
-            this.createMapOverlays(layers, projectLayers),
-          );
+          this.layerOverlays.set(this.createMapOverlays(layers, projectLayers));
           this.loadLayerLegends(layers);
         },
         error: (error: unknown) => {
@@ -888,10 +919,7 @@ export class ProjectDetailsComponent implements OnInit {
     preferences: ProjectLayerPreference[],
   ): MapOverlay[] {
     const preferencesByLayerId = new Map(
-      preferences.map((preference) => [
-        preference.layerId,
-        preference,
-      ]),
+      preferences.map((preference) => [preference.layerId, preference]),
     );
 
     return layers.map((layer, index) => {
@@ -928,17 +956,12 @@ export class ProjectDetailsComponent implements OnInit {
       return;
     }
 
-    forkJoin(
-      layers.map((layer) => this.layersApi.getLegend(layer.id)),
-    )
+    forkJoin(layers.map((layer) => this.layersApi.getLegend(layer.id)))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (legends) => {
           const legendsByLayerId = new Map(
-            legends.map((legend) => [
-              legend.layerId,
-              legend.items,
-            ]),
+            legends.map((legend) => [legend.layerId, legend.items]),
           );
           this.layerOverlays.update((overlays) =>
             overlays.map((overlay) => ({
@@ -987,10 +1010,7 @@ export class ProjectDetailsComponent implements OnInit {
       .subscribe({
         error: (error: unknown) => {
           this.apiErrorState.set(
-            getApiErrorMessage(
-              error,
-              'Layer preferences could not be saved.',
-            ),
+            getApiErrorMessage(error, 'Layer preferences could not be saved.'),
           );
         },
       });

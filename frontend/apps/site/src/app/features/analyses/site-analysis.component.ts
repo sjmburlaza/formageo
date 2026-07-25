@@ -6,22 +6,24 @@ import {
   OnChanges,
   OnDestroy,
   OnInit,
-  signal,
   SimpleChanges,
   computed,
   inject,
+  output,
+  signal,
 } from '@angular/core';
-import {
-  AnalysesApiService,
-  getApiErrorMessage,
-} from '@frontend/api-client';
+import { AnalysesApiService, getApiErrorMessage } from '@frontend/api-client';
+import { MapOverlay } from '@frontend/map';
 import {
   AnalysisDefinition,
+  AnalysisEvidenceResult,
+  AnalysisEvidenceSource,
   AnalysisParameterDefinition,
   AnalysisRun,
   AnalysisStatus,
   AnalysisType,
   GeoJsonResult,
+  LayerGeometryType,
   Site,
 } from '@frontend/models';
 import {
@@ -30,11 +32,62 @@ import {
   LucideCircleCheck,
   LucideClock3,
   LucideDownload,
+  LucideEyeOff,
   LucideHistory,
+  LucideInfo,
+  LucideLayers3,
+  LucideMapPinned,
   LucideRotateCcw,
   LucideX,
 } from '@lucide/angular';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
+
+type AnalysisTab = 'overview' | 'hazards' | 'planning' | 'terrain' | 'sources';
+
+const CORE_ANALYSES: AnalysisType[] = ['HazardExposure', 'Zoning', 'Terrain'];
+
+const RESULT_STYLES: Record<
+  string,
+  { fillColor: string; strokeColor: string; lineColor?: string }
+> = {
+  'flood-zone': {
+    fillColor: '#2563eb',
+    strokeColor: '#1d4ed8',
+  },
+  landslide: {
+    fillColor: '#b45309',
+    strokeColor: '#92400e',
+  },
+  'storm-surge': {
+    fillColor: '#0891b2',
+    strokeColor: '#0e7490',
+  },
+  'protected-area': {
+    fillColor: '#16a34a',
+    strokeColor: '#15803d',
+  },
+  'fault-line-proximity': {
+    fillColor: '#dc2626',
+    strokeColor: '#b91c1c',
+    lineColor: '#dc2626',
+  },
+  'zoning-classification': {
+    fillColor: '#d97706',
+    strokeColor: '#b45309',
+  },
+  'administrative-jurisdiction': {
+    fillColor: '#7c3aed',
+    strokeColor: '#6d28d9',
+  },
+  'development-restrictions': {
+    fillColor: '#e11d48',
+    strokeColor: '#be123c',
+  },
+  'terrain-profile': {
+    fillColor: '#65a30d',
+    strokeColor: '#4d7c0f',
+  },
+};
 
 @Component({
   selector: 'fg-site-analysis',
@@ -46,7 +99,11 @@ import { finalize } from 'rxjs';
     LucideCircleCheck,
     LucideClock3,
     LucideDownload,
+    LucideEyeOff,
     LucideHistory,
+    LucideInfo,
+    LucideLayers3,
+    LucideMapPinned,
     LucideRotateCcw,
     LucideX,
   ],
@@ -54,15 +111,27 @@ import { finalize } from 'rxjs';
   styleUrl: './site-analysis.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SiteAnalysisComponent
-  implements OnInit, OnChanges, OnDestroy
-{
+export class SiteAnalysisComponent implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) site!: Site;
+
+  readonly resultOverlaysChanged = output<MapOverlay[]>();
+  readonly resultLayerRequested = output<AnalysisEvidenceResult>();
 
   private readonly analysesApi = inject(AnalysesApiService);
   private historyRequestSequence = 0;
   private pollingTimer?: ReturnType<typeof setTimeout>;
 
+  protected readonly tabs: ReadonlyArray<{
+    id: AnalysisTab;
+    label: string;
+  }> = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'hazards', label: 'Hazards' },
+    { id: 'planning', label: 'Planning' },
+    { id: 'terrain', label: 'Terrain' },
+    { id: 'sources', label: 'Data Sources' },
+  ];
+  protected readonly activeTab = signal<AnalysisTab>('overview');
   protected readonly catalog = signal<AnalysisDefinition[]>([]);
   protected readonly runs = signal<AnalysisRun[]>([]);
   protected readonly selectedDefinition = signal<AnalysisDefinition | null>(
@@ -72,15 +141,56 @@ export class SiteAnalysisComponent
   protected readonly selectedRun = computed(() => {
     const selectedId = this.selectedRunId();
     return (
-      this.runs().find((run) => run.id === selectedId) ??
-      this.runs()[0] ??
-      null
+      this.runs().find((run) => run.id === selectedId) ?? this.runs()[0] ?? null
     );
   });
+  protected readonly latestCoreRuns = computed(() =>
+    CORE_ANALYSES.map((analysisType) =>
+      this.runs().find(
+        (run) =>
+          run.analysisType === analysisType &&
+          run.status === 'Completed' &&
+          run.result,
+      ),
+    ).filter((run): run is AnalysisRun => Boolean(run)),
+  );
+  protected readonly allEvidence = computed(() =>
+    this.latestCoreRuns().flatMap((run) => run.result?.results ?? []),
+  );
+  protected readonly sources = computed(() => {
+    const sourcesById = new Map<string, AnalysisEvidenceSource>();
+
+    for (const result of this.allEvidence()) {
+      sourcesById.set(result.source.id, result.source);
+    }
+
+    return [...sourcesById.values()];
+  });
+  protected readonly completedCoreCount = computed(
+    () => this.latestCoreRuns().length,
+  );
+  protected readonly coreRunsInProgress = computed(() =>
+    this.runs().filter(
+      (run) =>
+        CORE_ANALYSES.includes(run.analysisType) &&
+        (run.status === 'Pending' || run.status === 'Running'),
+    ),
+  );
+  protected readonly notableEvidence = computed(() =>
+    this.allEvidence().filter(
+      (result) => result.severity === 'High' || result.severity === 'Moderate',
+    ),
+  );
+  protected readonly terrainMetrics = computed(
+    () => this.latestRun('Terrain', 'Completed')?.result?.metrics ?? {},
+  );
   protected readonly parameterValues = signal<Record<string, unknown>>({});
+  protected readonly visibleResultIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly selectedSourceId = signal<string | null>(null);
   protected readonly catalogLoading = signal(true);
   protected readonly historyLoading = signal(true);
   protected readonly submittingType = signal<AnalysisType | null>(null);
+  protected readonly assessmentSubmitting = signal(false);
   protected readonly cancellingId = signal<string | null>(null);
   protected readonly catalogError = signal<string | null>(null);
   protected readonly historyError = signal<string | null>(null);
@@ -93,29 +203,106 @@ export class SiteAnalysisComponent
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['site'] && this.site?.id) {
       this.runs.set([]);
+      this.activeTab.set('overview');
       this.selectedDefinition.set(null);
       this.selectedRunId.set(null);
       this.parameterValues.set({});
+      this.visibleResultIds.set(new Set());
+      this.selectedSourceId.set(null);
       this.requestError.set(null);
+      this.emitResultOverlays();
       this.loadHistory(this.site.id, true);
     }
   }
 
   ngOnDestroy(): void {
     this.stopPolling();
+    this.resultOverlaysChanged.emit([]);
+  }
+
+  protected selectTab(tab: AnalysisTab): void {
+    this.activeTab.set(tab);
   }
 
   protected latestRun(
     analysisType: AnalysisType,
+    status?: AnalysisStatus,
   ): AnalysisRun | undefined {
     return this.runs().find(
-      (run) => run.analysisType === analysisType,
+      (run) =>
+        run.analysisType === analysisType &&
+        (status === undefined || run.status === status),
     );
   }
 
-  protected openRequestForm(
-    definition: AnalysisDefinition,
-  ): void {
+  protected evidenceFor(category: string): AnalysisEvidenceResult[] {
+    return this.allEvidence().filter((result) => result.category === category);
+  }
+
+  protected sourceResults(sourceId: string): AnalysisEvidenceResult[] {
+    return this.allEvidence().filter((result) => result.source.id === sourceId);
+  }
+
+  protected runCoreAssessment(): void {
+    if (this.assessmentSubmitting() || this.coreRunsInProgress().length > 0) {
+      return;
+    }
+
+    const definitions = CORE_ANALYSES.map((analysisType) =>
+      this.catalog().find(
+        (definition) => definition.analysisType === analysisType,
+      ),
+    ).filter((definition): definition is AnalysisDefinition =>
+      Boolean(definition),
+    );
+
+    if (definitions.length !== CORE_ANALYSES.length) {
+      this.requestError.set(
+        'The core intelligence catalog is incomplete. Reload the catalog and try again.',
+      );
+      return;
+    }
+
+    this.assessmentSubmitting.set(true);
+    this.requestError.set(null);
+
+    forkJoin(
+      definitions.map((definition) =>
+        this.analysesApi.createAnalysis(this.site.id, {
+          analysisType: definition.analysisType,
+          inputParameters: Object.fromEntries(
+            definition.parameters.map((parameter) => [
+              parameter.name,
+              parameter.defaultValue,
+            ]),
+          ),
+        }),
+      ),
+    )
+      .pipe(finalize(() => this.assessmentSubmitting.set(false)))
+      .subscribe({
+        next: (createdRuns) => {
+          const createdIds = new Set(createdRuns.map((run) => run.id));
+          this.runs.update((runs) => [
+            ...createdRuns,
+            ...runs.filter((run) => !createdIds.has(run.id)),
+          ]);
+          this.selectedRunId.set(createdRuns[0]?.id ?? null);
+          this.schedulePolling();
+        },
+        error: (error: unknown) => {
+          this.requestError.set(
+            getApiErrorMessage(
+              error,
+              'The core assessment could not be queued.',
+            ),
+          );
+          this.loadHistory(this.site.id, false);
+        },
+      });
+  }
+
+  protected openRequestForm(definition: AnalysisDefinition): void {
     this.selectedDefinition.set(definition);
     this.requestError.set(null);
     this.parameterValues.set(
@@ -137,13 +324,8 @@ export class SiteAnalysisComponent
     this.requestError.set(null);
   }
 
-  protected parameterValue(
-    parameter: AnalysisParameterDefinition,
-  ): unknown {
-    return (
-      this.parameterValues()[parameter.name] ??
-      parameter.defaultValue
-    );
+  protected parameterValue(parameter: AnalysisParameterDefinition): unknown {
+    return this.parameterValues()[parameter.name] ?? parameter.defaultValue;
   }
 
   protected updateParameter(
@@ -172,11 +354,7 @@ export class SiteAnalysisComponent
       return;
     }
 
-    this.requestAnalysis(
-      definition.analysisType,
-      this.parameterValues(),
-      true,
-    );
+    this.requestAnalysis(definition.analysisType, this.parameterValues(), true);
   }
 
   protected selectRun(run: AnalysisRun): void {
@@ -212,10 +390,7 @@ export class SiteAnalysisComponent
         },
         error: (error: unknown) => {
           this.requestError.set(
-            getApiErrorMessage(
-              error,
-              'The analysis could not be cancelled.',
-            ),
+            getApiErrorMessage(error, 'The analysis could not be cancelled.'),
           );
           this.loadHistory(this.site.id, false);
         },
@@ -227,11 +402,7 @@ export class SiteAnalysisComponent
       return;
     }
 
-    this.requestAnalysis(
-      run.analysisType,
-      run.inputParameters,
-      false,
-    );
+    this.requestAnalysis(run.analysisType, run.inputParameters, false);
   }
 
   protected canCancel(run: AnalysisRun): boolean {
@@ -253,9 +424,7 @@ export class SiteAnalysisComponent
     }
   }
 
-  protected resultMetrics(
-    run: AnalysisRun,
-  ): [string, unknown][] {
+  protected resultMetrics(run: AnalysisRun): [string, unknown][] {
     return Object.entries(run.result?.metrics ?? {});
   }
 
@@ -284,12 +453,96 @@ export class SiteAnalysisComponent
     return String(value);
   }
 
+  protected metric(values: Record<string, unknown>, key: string): string {
+    return this.metricValue(values[key]);
+  }
+
   protected definitionName(analysisType: AnalysisType): string {
     return (
       this.catalog().find(
-        (definition) =>
-          definition.analysisType === analysisType,
+        (definition) => definition.analysisType === analysisType,
       )?.name ?? analysisType
+    );
+  }
+
+  protected severityClass(severity: string): string {
+    return `severity--${severity.toLocaleLowerCase()}`;
+  }
+
+  protected affectedArea(result: AnalysisEvidenceResult): string {
+    const area = result.intersectionAreaSquareMetres;
+
+    if (area >= 1_000_000) {
+      return `${(area / 1_000_000).toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      })} km²`;
+    }
+
+    if (area >= 10_000) {
+      return `${(area / 10_000).toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      })} ha`;
+    }
+
+    return `${area.toLocaleString(undefined, {
+      maximumFractionDigits: 0,
+    })} m²`;
+  }
+
+  protected affectedPercent(result: AnalysisEvidenceResult): string {
+    return `${result.sitePercent.toLocaleString(undefined, {
+      maximumFractionDigits: 2,
+    })}%`;
+  }
+
+  protected intersections(
+    result: AnalysisEvidenceResult,
+  ): Array<Record<string, unknown>> {
+    const value = result.details['intersections'];
+    return Array.isArray(value)
+      ? (value as Array<Record<string, unknown>>)
+      : [];
+  }
+
+  protected intersectionValue(
+    value: Record<string, unknown>,
+    key: string,
+  ): string {
+    return this.metricValue(value[key]);
+  }
+
+  protected layerVisible(result: AnalysisEvidenceResult): boolean {
+    return this.visibleResultIds().has(result.id);
+  }
+
+  protected toggleEvidenceLayer(result: AnalysisEvidenceResult): void {
+    if (!result.resultGeometry) {
+      return;
+    }
+
+    this.visibleResultIds.update((visibleIds) => {
+      const nextIds = new Set(visibleIds);
+      if (nextIds.has(result.id)) {
+        nextIds.delete(result.id);
+      } else {
+        nextIds.add(result.id);
+      }
+      return nextIds;
+    });
+    this.emitResultOverlays();
+
+    if (this.layerVisible(result)) {
+      this.resultLayerRequested.emit(result);
+    }
+  }
+
+  protected showSource(sourceId: string): void {
+    this.selectedSourceId.set(sourceId);
+    this.activeTab.set('sources');
+    setTimeout(() =>
+      document
+        .getElementById(`analysis-source-${sourceId}`)
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
     );
   }
 
@@ -382,10 +635,7 @@ export class SiteAnalysisComponent
       });
   }
 
-  private loadHistory(
-    siteId: string,
-    showLoading: boolean,
-  ): void {
+  private loadHistory(siteId: string, showLoading: boolean): void {
     const requestSequence = ++this.historyRequestSequence;
     this.stopPolling();
 
@@ -414,12 +664,10 @@ export class SiteAnalysisComponent
 
           this.runs.set(runs);
           const selectedId = this.selectedRunId();
-          if (
-            selectedId &&
-            !runs.some((run) => run.id === selectedId)
-          ) {
+          if (selectedId && !runs.some((run) => run.id === selectedId)) {
             this.selectedRunId.set(runs[0]?.id ?? null);
           }
+          this.emitResultOverlays();
           this.schedulePolling();
         },
         error: (error: unknown) => {
@@ -431,10 +679,7 @@ export class SiteAnalysisComponent
           }
 
           this.historyError.set(
-            getApiErrorMessage(
-              error,
-              'Previous analyses could not be loaded.',
-            ),
+            getApiErrorMessage(error, 'Previous analyses could not be loaded.'),
           );
           this.schedulePolling();
         },
@@ -446,18 +691,14 @@ export class SiteAnalysisComponent
 
     if (
       !this.runs().some(
-        (run) =>
-          run.status === 'Pending' || run.status === 'Running',
+        (run) => run.status === 'Pending' || run.status === 'Running',
       )
     ) {
       return;
     }
 
     const siteId = this.site.id;
-    this.pollingTimer = setTimeout(
-      () => this.loadHistory(siteId, false),
-      2000,
-    );
+    this.pollingTimer = setTimeout(() => this.loadHistory(siteId, false), 2000);
   }
 
   private stopPolling(): void {
@@ -467,9 +708,117 @@ export class SiteAnalysisComponent
     }
   }
 
-  private asFeatureCollection(
-    geometry: GeoJsonResult,
-  ): GeoJsonResult {
+  private emitResultOverlays(): void {
+    if (!this.site?.id) {
+      this.resultOverlaysChanged.emit([]);
+      return;
+    }
+
+    this.resultOverlaysChanged.emit(
+      this.allEvidence()
+        .filter((result) => result.resultGeometry)
+        .map((result, index) => this.createResultOverlay(result, index)),
+    );
+  }
+
+  private createResultOverlay(
+    result: AnalysisEvidenceResult,
+    index: number,
+  ): MapOverlay {
+    const source = result.source;
+    const style = RESULT_STYLES[result.id] ?? RESULT_STYLES['terrain-profile'];
+    const geometryType = this.resultGeometryType(result.resultGeometry);
+
+    return {
+      id: `analysis-${this.site.id}-${result.id}`,
+      name: result.name,
+      description: result.summary,
+      category:
+        result.category === 'Terrain'
+          ? 'Terrain'
+          : result.category === 'Planning'
+            ? 'Planning'
+            : result.id === 'protected-area'
+              ? 'Environment'
+              : 'Hazards',
+      geographicCoverage: `${this.site.name} result intersection`,
+      coordinateSystem: source.coordinateSystem,
+      geometryType,
+      featureNameProperty: 'name',
+      style: {
+        fillColor: style.fillColor,
+        fillOpacity: 0.4,
+        strokeColor: style.strokeColor,
+        strokeWidth: 2,
+        lineColor: style.lineColor ?? style.strokeColor,
+        lineWidth: result.id === 'fault-line-proximity' ? 3 : 2,
+      },
+      dataSource: {
+        id: source.id,
+        name: source.dataset,
+        organization: source.organization,
+        licenseName: source.license,
+        licenseUrl:
+          source.license === 'CC0 1.0'
+            ? 'https://creativecommons.org/publicdomain/zero/1.0/'
+            : null,
+        attribution: `${source.organization} — ${source.dataset}`,
+        sourceUrl: source.sourceUrl,
+      },
+      lastUpdatedAtUtc: `${source.publishedDate}T00:00:00Z`,
+      deliveryMethod: 'GeoJson',
+      dataUrl: '',
+      data: result.resultGeometry ?? undefined,
+      sourceLayer: null,
+      minimumZoom: null,
+      maximumZoom: null,
+      legend: [
+        {
+          id: `${result.id}-legend`,
+          label: `${result.classification} · ${result.severity}`,
+          fillColor: style.fillColor,
+          strokeColor: style.strokeColor,
+          symbol: null,
+          sortOrder: 0,
+        },
+      ],
+      visible: this.visibleResultIds().has(result.id),
+      opacity: 0.85,
+      sortOrder: 1000 + index,
+      filter: null,
+    };
+  }
+
+  private resultGeometryType(
+    resultGeometry: GeoJsonResult | null,
+  ): LayerGeometryType {
+    if (!resultGeometry) {
+      return 'Polygon';
+    }
+
+    const feature =
+      resultGeometry.type === 'Feature'
+        ? resultGeometry
+        : (resultGeometry.features[0] as
+            | {
+                geometry?: { type?: string };
+              }
+            | undefined);
+    const geometryType =
+      resultGeometry.type === 'Feature'
+        ? String(resultGeometry.geometry['type'] ?? '')
+        : String(feature?.geometry?.type ?? '');
+
+    if (geometryType.includes('LineString')) {
+      return 'LineString';
+    }
+    if (geometryType.includes('Point')) {
+      return 'Point';
+    }
+    return 'Polygon';
+  }
+
+  private asFeatureCollection(geometry: GeoJsonResult): GeoJsonResult {
     return geometry.type === 'Feature'
       ? {
           type: 'FeatureCollection',

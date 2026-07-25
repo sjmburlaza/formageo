@@ -7,6 +7,7 @@ using FormaGeo.Infrastructure.Analyses;
 using FormaGeo.Infrastructure.Persistence;
 using FormaGeo.Infrastructure.Persistence.Queries;
 using FormaGeo.Infrastructure.Persistence.Repositories;
+using FormaGeo.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,6 +56,7 @@ public static class DependencyInjection
             AnalysisRunRepository>();
 
         services.AddScoped<AnalysisRunProcessor>();
+        services.AddScoped<DevelopmentMockDataSeeder>();
 
         var geoprocessingBaseUrl =
             configuration["Geoprocessing:BaseUrl"]

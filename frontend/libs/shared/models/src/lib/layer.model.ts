@@ -3,14 +3,11 @@ export type LayerCategory =
   | 'Planning'
   | 'Hazards'
   | 'Environment'
+  | 'Terrain'
   | 'Transport'
   | 'Facilities';
 
-export type LayerGeometryType =
-  | 'Point'
-  | 'LineString'
-  | 'Polygon'
-  | 'Raster';
+export type LayerGeometryType = 'Point' | 'LineString' | 'Polygon' | 'Raster';
 
 export type LayerDeliveryMethod =
   | 'GeoJson'

@@ -5,6 +5,7 @@ public enum AnalysisType
     SiteGeometry,
     HazardExposure,
     Zoning,
+    Terrain,
     Accessibility,
     NearbyFacilities,
     Suitability

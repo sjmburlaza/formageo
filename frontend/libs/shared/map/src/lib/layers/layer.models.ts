@@ -5,6 +5,7 @@ import {
   LayerGeometryType,
   LayerLegendItem,
   LayerStyle,
+  GeoJsonResult,
 } from '@frontend/models';
 
 export interface BaseMapDefinition {
@@ -26,6 +27,7 @@ export interface MapOverlay {
   lastUpdatedAtUtc: string;
   deliveryMethod: LayerDeliveryMethod;
   dataUrl: string;
+  data?: GeoJsonResult;
   sourceLayer: string | null;
   minimumZoom: number | null;
   maximumZoom: number | null;

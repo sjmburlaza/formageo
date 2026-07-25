@@ -16,7 +16,10 @@ using FormaGeo.Application.Sites.RestoreSite;
 using FormaGeo.Application.Sites.UpdateSite;
 using FormaGeo.Application.Sites.UpdateSiteBoundary;
 using FormaGeo.Infrastructure;
+using FormaGeo.Infrastructure.Persistence;
+using FormaGeo.Infrastructure.Persistence.Seeding;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -108,6 +111,31 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    await using (var scope =
+        app.Services.CreateAsyncScope())
+    {
+        var database =
+            scope.ServiceProvider
+                .GetRequiredService<FormaGeoDbContext>();
+
+        if (builder.Configuration.GetValue(
+                "DatabaseInitialization:ApplyMigrations",
+                false))
+        {
+            await database.Database.MigrateAsync();
+        }
+
+        if (builder.Configuration.GetValue(
+                "DatabaseInitialization:SeedMockData",
+                false))
+        {
+            var mockDataSeeder =
+                scope.ServiceProvider.GetRequiredService<
+                    DevelopmentMockDataSeeder>();
+            await mockDataSeeder.SeedAsync();
+        }
+    }
+
     app.MapOpenApi();
 
     app.UseSwaggerUI(options =>
