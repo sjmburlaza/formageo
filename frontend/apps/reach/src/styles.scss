@@ -6,11 +6,11 @@ html {
   color: var(--fg-text-primary);
   background: var(--fg-surface-page);
   font-family: var(--fg-font-sans);
-  font-size: 14px;
-  line-height: var(--fg-leading-body-md);
+  font-size: 16px;
 }
 
 body {
   min-height: 100%;
   margin: 0;
+  font: var(--fg-type-body-md);
 }

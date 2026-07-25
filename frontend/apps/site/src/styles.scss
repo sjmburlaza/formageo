@@ -8,8 +8,7 @@ html {
   color: var(--fg-text-primary);
   background: var(--fg-surface-page);
   font-family: var(--fg-font-sans);
-  font-size: 14px;
-  line-height: var(--fg-leading-body-md);
+  font-size: 16px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
@@ -23,6 +22,7 @@ html {
 body {
   min-height: 100%;
   margin: 0;
+  font: var(--fg-type-body-md);
 }
 
 button,
@@ -69,8 +69,7 @@ a {
   align-items: center;
   gap: var(--fg-space-3);
   color: var(--fg-neutral-900);
-  font-size: var(--fg-text-heading-sm);
-  font-weight: 700;
+  font: var(--fg-type-heading-sm);
   letter-spacing: -0.02em;
   text-decoration: none;
 }
@@ -122,9 +121,7 @@ a {
   gap: var(--fg-space-2);
   border: 1px solid transparent;
   border-radius: var(--fg-radius-md);
-  font-size: var(--fg-text-label-md);
-  font-weight: 600;
-  line-height: 1;
+  font: var(--fg-type-label-md);
   text-decoration: none;
   cursor: pointer;
   transition:

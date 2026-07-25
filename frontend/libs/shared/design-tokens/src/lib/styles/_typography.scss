@@ -4,27 +4,72 @@
     sans-serif;
   --fg-font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
 
-  --fg-text-display-lg: 2.5rem;
-  --fg-text-display-sm: 2rem;
-  --fg-text-heading-xl: 1.75rem;
-  --fg-text-heading-lg: 1.5rem;
-  --fg-text-heading-md: 1.25rem;
-  --fg-text-heading-sm: 1rem;
-  --fg-text-body-lg: 1rem;
-  --fg-text-body-md: 0.875rem;
-  --fg-text-body-sm: 0.8125rem;
-  --fg-text-label-md: 0.875rem;
-  --fg-text-label-sm: 0.75rem;
-  --fg-text-caption: 0.6875rem;
+  --fg-text-display-lg: 40px;
+  --fg-text-display-sm: 32px;
+  --fg-text-heading-xl: 28px;
+  --fg-text-heading-lg: 24px;
+  --fg-text-heading-md: 20px;
+  --fg-text-heading-sm: 16px;
+  --fg-text-body-lg: 16px;
+  --fg-text-body-md: 14px;
+  --fg-text-body-sm: 13px;
+  --fg-text-label-md: 14px;
+  --fg-text-label-sm: 12px;
+  --fg-text-caption: 11px;
 
-  --fg-leading-display-lg: 3rem;
-  --fg-leading-display-sm: 2.5rem;
-  --fg-leading-heading-xl: 2.25rem;
-  --fg-leading-heading-lg: 2rem;
-  --fg-leading-heading-md: 1.75rem;
-  --fg-leading-heading-sm: 1.5rem;
-  --fg-leading-body-lg: 1.5rem;
-  --fg-leading-body-md: 1.25rem;
-  --fg-leading-body-sm: 1.125rem;
-  --fg-leading-caption: 1rem;
+  --fg-leading-display-lg: 48px;
+  --fg-leading-display-sm: 40px;
+  --fg-leading-heading-xl: 36px;
+  --fg-leading-heading-lg: 32px;
+  --fg-leading-heading-md: 28px;
+  --fg-leading-heading-sm: 24px;
+  --fg-leading-body-lg: 24px;
+  --fg-leading-body-md: 20px;
+  --fg-leading-body-sm: 18px;
+  --fg-leading-label-md: 20px;
+  --fg-leading-label-sm: 16px;
+  --fg-leading-caption: 16px;
+
+  --fg-weight-regular: 400;
+  --fg-weight-medium: 500;
+  --fg-weight-semibold: 600;
+  --fg-weight-heading: 650;
+  --fg-weight-bold: 700;
+
+  --fg-type-display-lg:
+    var(--fg-weight-bold) var(--fg-text-display-lg) /
+    var(--fg-leading-display-lg) var(--fg-font-sans);
+  --fg-type-display-sm:
+    var(--fg-weight-bold) var(--fg-text-display-sm) /
+    var(--fg-leading-display-sm) var(--fg-font-sans);
+  --fg-type-heading-xl:
+    var(--fg-weight-bold) var(--fg-text-heading-xl) /
+    var(--fg-leading-heading-xl) var(--fg-font-sans);
+  --fg-type-heading-lg:
+    var(--fg-weight-heading) var(--fg-text-heading-lg) /
+    var(--fg-leading-heading-lg) var(--fg-font-sans);
+  --fg-type-heading-md:
+    var(--fg-weight-heading) var(--fg-text-heading-md) /
+    var(--fg-leading-heading-md) var(--fg-font-sans);
+  --fg-type-heading-sm:
+    var(--fg-weight-semibold) var(--fg-text-heading-sm) /
+    var(--fg-leading-heading-sm) var(--fg-font-sans);
+  --fg-type-body-lg:
+    var(--fg-weight-regular) var(--fg-text-body-lg) /
+    var(--fg-leading-body-lg) var(--fg-font-sans);
+  --fg-type-body-md:
+    var(--fg-weight-regular) var(--fg-text-body-md) /
+    var(--fg-leading-body-md) var(--fg-font-sans);
+  --fg-type-body-sm:
+    var(--fg-weight-regular) var(--fg-text-body-sm) /
+    var(--fg-leading-body-sm) var(--fg-font-sans);
+  --fg-type-label-md:
+    var(--fg-weight-semibold) var(--fg-text-label-md) /
+    var(--fg-leading-label-md) var(--fg-font-sans);
+  --fg-type-label-sm:
+    var(--fg-weight-semibold) var(--fg-text-label-sm) /
+    var(--fg-leading-label-sm) var(--fg-font-sans);
+  --fg-type-caption:
+    var(--fg-weight-medium) var(--fg-text-caption) /
+    var(--fg-leading-caption) var(--fg-font-sans);
 }

@@ -44,8 +44,8 @@
   border-color: var(--fg-neutral-600);
   color: var(--fg-neutral-800);
   background: rgb(255 255 255 / 78%);
+  font: var(--fg-type-caption);
   font-family: var(--fg-font-mono);
-  font-size: var(--fg-text-caption);
 }
 
 .fg-map-tools {
@@ -126,8 +126,7 @@
   color: var(--fg-text-muted);
   background: var(--fg-surface-map-control);
   box-shadow: var(--fg-shadow-sm);
-  font-size: var(--fg-text-caption);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
   text-transform: uppercase;
 }
 
@@ -136,8 +135,7 @@
   outline: 0;
   color: var(--fg-neutral-800);
   background: transparent;
-  font-size: var(--fg-text-body-sm);
-  font-weight: 500;
+  font: var(--fg-type-body-sm);
   text-transform: none;
   cursor: pointer;
 }
@@ -166,13 +164,12 @@
 }
 
 .fg-map-instructions strong {
-  font-size: var(--fg-text-label-sm);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
 }
 
 .fg-map-instructions span {
   color: var(--fg-neutral-300);
-  font-size: var(--fg-text-caption);
+  font: var(--fg-type-caption);
 }
 
 .fg-map-instructions button {
@@ -186,8 +183,7 @@
   border-radius: var(--fg-radius-sm);
   color: var(--fg-neutral-0);
   background: rgb(255 255 255 / 8%);
-  font-size: var(--fg-text-caption);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
   cursor: pointer;
 }
 
@@ -231,8 +227,7 @@
   gap: var(--fg-space-2);
   color: var(--fg-text-secondary);
   background: var(--fg-neutral-100);
-  font-size: var(--fg-text-body-md);
-  font-weight: 600;
+  font: var(--fg-type-label-md);
 }
 
 .fg-map-loading span {

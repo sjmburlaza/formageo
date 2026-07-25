@@ -15,8 +15,7 @@
   align-items: center;
   gap: var(--fg-space-2);
   color: var(--fg-text-secondary);
-  font-size: var(--fg-text-body-md);
-  font-weight: 600;
+  font: var(--fg-type-label-md);
   text-decoration: none;
 }
 
@@ -51,8 +50,7 @@
 .eyebrow {
   margin: 0 0 var(--fg-space-1);
   color: var(--fg-brand-700);
-  font-size: var(--fg-text-label-sm);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -65,8 +63,7 @@ p {
 
 h1 {
   margin-bottom: var(--fg-space-2);
-  font-size: var(--fg-text-heading-xl);
-  line-height: var(--fg-leading-heading-xl);
+  font: var(--fg-type-heading-xl);
   letter-spacing: -0.035em;
 }
 
@@ -75,7 +72,7 @@ h1 {
   align-items: center;
   gap: var(--fg-space-3);
   color: var(--fg-text-muted);
-  font-size: var(--fg-text-body-sm);
+  font: var(--fg-type-body-sm);
 }
 
 .status-badge {
@@ -87,8 +84,7 @@ h1 {
   border-radius: var(--fg-radius-full);
   color: var(--fg-success-text);
   background: var(--fg-success-bg);
-  font-size: var(--fg-text-caption);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
 }
 
 .status-badge i {
@@ -126,8 +122,7 @@ h1 {
 
 .card h2 {
   margin-bottom: var(--fg-space-5);
-  font-size: var(--fg-text-heading-md);
-  line-height: var(--fg-leading-heading-md);
+  font: var(--fg-type-heading-md);
 }
 
 dl {
@@ -143,23 +138,21 @@ dl > div {
 
 dt {
   color: var(--fg-text-muted);
-  font-size: var(--fg-text-caption);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 dd {
   margin: 0;
-  font-size: var(--fg-text-body-md);
-  font-weight: 600;
+  font: var(--fg-type-label-md);
 }
 
 dd code {
   overflow-wrap: anywhere;
   color: var(--fg-neutral-700);
+  font: var(--fg-type-body-sm);
   font-family: var(--fg-font-mono);
-  font-size: var(--fg-text-body-sm);
 }
 
 .card--code {
@@ -173,9 +166,8 @@ pre {
   border-radius: var(--fg-radius-md);
   color: var(--fg-neutral-200);
   background: var(--fg-surface-map-dark);
+  font: var(--fg-type-caption);
   font-family: var(--fg-font-mono);
-  font-size: var(--fg-text-caption);
-  line-height: 1.6;
 }
 
 .error-banner {
@@ -185,7 +177,7 @@ pre {
   border-radius: var(--fg-radius-lg);
   color: var(--fg-error-text);
   background: var(--fg-error-bg);
-  font-size: var(--fg-text-body-md);
+  font: var(--fg-type-body-md);
 }
 
 .page-state {
@@ -199,7 +191,7 @@ pre {
 
 .page-state h1 {
   margin: var(--fg-space-5) 0 var(--fg-space-2);
-  font-size: var(--fg-text-heading-lg);
+  font: var(--fg-type-heading-lg);
 }
 
 .page-state p {

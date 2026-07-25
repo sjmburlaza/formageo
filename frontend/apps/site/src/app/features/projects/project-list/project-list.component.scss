@@ -16,8 +16,7 @@
 
 .app-bar__context {
   color: var(--fg-text-muted);
-  font-size: var(--fg-text-caption);
-  font-weight: 500;
+  font: var(--fg-type-caption);
 }
 
 .projects-shell {
@@ -32,22 +31,20 @@
 
 .projects-page__header h1 {
   margin: 0 0 var(--fg-space-2);
-  font-size: var(--fg-text-heading-xl);
-  line-height: var(--fg-leading-heading-xl);
+  font: var(--fg-type-heading-xl);
   letter-spacing: -0.035em;
 }
 
 .projects-page__header > div > p:last-child {
   margin-bottom: 0;
   color: var(--fg-text-secondary);
-  font-size: var(--fg-text-body-md);
+  font: var(--fg-type-body-md);
 }
 
 .eyebrow {
   margin: 0 0 var(--fg-space-1);
   color: var(--fg-brand-700);
-  font-size: var(--fg-text-label-sm);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -73,16 +70,14 @@ p {
 
 .project-create h2 {
   margin-bottom: var(--fg-space-1);
-  font-size: var(--fg-text-heading-md);
-  line-height: var(--fg-leading-heading-md);
+  font: var(--fg-type-heading-md);
   letter-spacing: -0.025em;
 }
 
 .project-create > div > p:last-child {
   margin-bottom: 0;
   color: var(--fg-text-secondary);
-  font-size: var(--fg-text-body-sm);
-  line-height: var(--fg-leading-body-sm);
+  font: var(--fg-type-body-sm);
 }
 
 form {
@@ -92,8 +87,7 @@ form {
 
 .form-label {
   color: var(--fg-neutral-700);
-  font-size: var(--fg-text-label-sm);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
 }
 
 .create-row {
@@ -126,7 +120,7 @@ input:focus {
 .field-error {
   margin-bottom: 0;
   color: var(--fg-error-text);
-  font-size: var(--fg-text-label-sm);
+  font: var(--fg-type-label-sm);
 }
 
 .page-error {
@@ -150,7 +144,7 @@ input:focus {
 .page-error p {
   flex: 1;
   margin-bottom: 0;
-  font-size: var(--fg-text-body-md);
+  font: var(--fg-type-body-md);
 }
 
 .page-error button {
@@ -160,8 +154,7 @@ input:focus {
   border-radius: var(--fg-radius-sm);
   color: inherit;
   background: transparent;
-  font-size: var(--fg-text-label-sm);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
   cursor: pointer;
 }
 
@@ -182,15 +175,13 @@ input:focus {
 
 .section-heading h2 {
   margin-bottom: 0;
-  font-size: var(--fg-text-heading-lg);
-  line-height: var(--fg-leading-heading-lg);
+  font: var(--fg-type-heading-lg);
   letter-spacing: -0.025em;
 }
 
 .section-heading > span {
   color: var(--fg-text-muted);
-  font-size: var(--fg-text-body-sm);
-  font-weight: 500;
+  font: var(--fg-type-body-sm);
 }
 
 .project-grid {
@@ -290,8 +281,7 @@ input:focus {
   display: block;
   border-radius: var(--fg-radius-md);
   color: var(--fg-text-primary);
-  font-size: var(--fg-text-body-sm);
-  font-weight: 500;
+  font: var(--fg-type-body-sm);
   text-decoration: none;
 }
 
@@ -306,15 +296,14 @@ input:focus {
 .project-card__body h3 {
   margin-bottom: var(--fg-space-1);
   overflow-wrap: anywhere;
-  font-size: var(--fg-text-heading-sm);
-  line-height: var(--fg-leading-heading-sm);
+  font: var(--fg-type-heading-sm);
   letter-spacing: -0.015em;
 }
 
 .project-card__body p {
   margin-bottom: 0;
   color: var(--fg-text-muted);
-  font-size: var(--fg-text-body-sm);
+  font: var(--fg-type-body-sm);
 }
 
 .project-card__footer {
@@ -328,7 +317,7 @@ input:focus {
 
 .project-card__footer > span {
   color: var(--fg-text-muted);
-  font-size: var(--fg-text-body-sm);
+  font: var(--fg-type-body-sm);
 }
 
 .project-card__footer strong {
@@ -340,8 +329,7 @@ input:focus {
   align-items: center;
   gap: var(--fg-space-1);
   color: var(--fg-brand-700);
-  font-size: var(--fg-text-label-sm);
-  font-weight: 600;
+  font: var(--fg-type-label-sm);
   text-decoration: none;
 }
 
@@ -407,13 +395,14 @@ input:focus {
 
 .empty-state h3 {
   margin-bottom: var(--fg-space-1);
+  font: var(--fg-type-heading-sm);
 }
 
 .empty-state p {
   max-width: 32rem;
   margin: 0 auto var(--fg-space-4);
   color: var(--fg-text-secondary);
-  font-size: var(--fg-text-body-md);
+  font: var(--fg-type-body-md);
 }
 
 @keyframes pulse {
