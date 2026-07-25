@@ -6,6 +6,9 @@
 .env.*
 !.env.example
 
+# Local Codex hosting configuration
+.openai/hosting.json
+
 # Angular and Nx
 **/node_modules/
 **/dist/
