@@ -1,7 +1,9 @@
+using FormaGeo.Application.Analyses;
 using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects;
 using FormaGeo.Application.Sites;
 using FormaGeo.Application.Sites.Summaries;
+using FormaGeo.Infrastructure.Analyses;
 using FormaGeo.Infrastructure.Persistence;
 using FormaGeo.Infrastructure.Persistence.Queries;
 using FormaGeo.Infrastructure.Persistence.Repositories;
@@ -47,6 +49,25 @@ public static class DependencyInjection
         services.AddScoped<
             ISiteSummaryReader,
             PostGisSiteSummaryReader>();
+
+        services.AddScoped<
+            IAnalysisRunRepository,
+            AnalysisRunRepository>();
+
+        services.AddScoped<AnalysisRunProcessor>();
+
+        var geoprocessingBaseUrl =
+            configuration["Geoprocessing:BaseUrl"]
+            ?? "http://localhost:8000/";
+
+        if (!geoprocessingBaseUrl.EndsWith('/'))
+        {
+            geoprocessingBaseUrl += "/";
+        }
+
+        services.AddSingleton<IAnalysisExecutor>(
+            new GeoprocessingAnalysisExecutor(
+                geoprocessingBaseUrl));
 
         return services;
     }

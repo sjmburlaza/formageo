@@ -588,16 +588,7 @@
                 }
               </section>
             } @else if (activeInspectorTab() === 'analysis') {
-              <section class="tab-empty">
-                <span aria-hidden="true">
-                  <svg lucideChartNoAxesCombined></svg>
-                </span>
-                <h3>No analyses yet</h3>
-                <p>
-                  Run a suitability analysis to compare candidate sites against
-                  project criteria.
-                </p>
-              </section>
+              <fg-site-analysis [site]="site" />
             } @else {
               <section class="inspector-section">
                 <ol class="history-list">

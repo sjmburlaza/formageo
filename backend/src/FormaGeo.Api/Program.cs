@@ -1,3 +1,5 @@
+using FormaGeo.Api.BackgroundServices;
+using FormaGeo.Application.Analyses;
 using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects.CreateProject;
 using FormaGeo.Application.Projects.GetProject;
@@ -86,6 +88,8 @@ builder.Services.AddScoped<ArchiveSiteHandler>();
 builder.Services.AddScoped<RestoreSiteHandler>();
 builder.Services.AddScoped<ExportSiteHandler>();
 builder.Services.AddScoped<SiteImportService>();
+builder.Services.AddScoped<AnalysisRunService>();
+builder.Services.AddHostedService<AnalysisWorker>();
 
 builder.Services.AddCors(options =>
 {

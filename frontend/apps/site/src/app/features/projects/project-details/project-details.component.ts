@@ -44,7 +44,6 @@ import {
 import {
   LucideArrowLeft,
   LucideArrowRight,
-  LucideChartNoAxesCombined,
   LucideCircleAlert,
   LucideCircleCheck,
   LucideColumns3,
@@ -67,6 +66,7 @@ import {
 } from './site-summary-formatters';
 import { SiteImportWizardComponent } from '../../sites/site-import/site-import-wizard.component';
 import { SiteImportCompletedEvent } from '../../sites/site-import/site-import.models';
+import { SiteAnalysisComponent } from '../../analyses/site-analysis.component';
 
 type InspectorTab = 'overview' | 'boundary' | 'analysis' | 'history';
 type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
@@ -78,7 +78,6 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
     CommonModule,
     LucideArrowLeft,
     LucideArrowRight,
-    LucideChartNoAxesCombined,
     LucideCircleAlert,
     LucideCircleCheck,
     LucideColumns3,
@@ -93,6 +92,7 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
     MapComponent,
     ReactiveFormsModule,
     RouterLink,
+    SiteAnalysisComponent,
     SiteImportWizardComponent,
   ],
   templateUrl: './project-details.component.html',
