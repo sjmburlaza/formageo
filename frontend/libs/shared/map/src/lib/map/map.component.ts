@@ -24,6 +24,7 @@ import {
   Map as MapLibreMap,
   MapLayerMouseEvent,
   MapMouseEvent,
+  Marker,
   NavigationControl,
   ScaleControl,
   setWorkerUrl,
@@ -110,6 +111,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   private draftPositions: MapPosition[] = [];
   private activeVertexIndex: number | null = null;
   private hasAutoFittedFeatures = false;
+  private highlightedMarker?: Marker;
 
   protected readonly mode = signal<MapInteractionMode>('idle');
   protected readonly selectedFeatureIdSignal = signal<string | null>(null);
@@ -153,6 +155,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.resizeObserver?.disconnect();
+    this.highlightedMarker?.remove();
     this.map?.remove();
   }
 
@@ -235,6 +238,37 @@ export class MapComponent implements AfterViewInit, OnDestroy {
 
   resize(): void {
     this.map?.resize();
+  }
+
+  highlightPosition(position: MapPosition): void {
+    if (
+      !this.map ||
+      !Number.isFinite(position[0]) ||
+      !Number.isFinite(position[1])
+    ) {
+      return;
+    }
+
+    this.clearHighlightedPosition();
+    this.highlightedMarker = new Marker({
+      color: '#0f766e',
+    })
+      .setLngLat(position)
+      .addTo(this.map);
+    this.highlightedMarker
+      .getElement()
+      .setAttribute('aria-label', 'Site centroid');
+
+    this.map.easeTo({
+      center: position,
+      zoom: Math.max(this.map.getZoom(), 15),
+      duration: 650,
+    });
+  }
+
+  clearHighlightedPosition(): void {
+    this.highlightedMarker?.remove();
+    this.highlightedMarker = undefined;
   }
 
   protected changeBaseMap(event: Event): void {

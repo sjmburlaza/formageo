@@ -30,7 +30,7 @@ import {
   MapGeometryEvent,
   MapInteractionMode,
 } from '@frontend/map';
-import { GeoJsonPolygon, Project, Site } from '@frontend/models';
+import { GeoJsonPolygon, Project, Site, SiteSummary } from '@frontend/models';
 import {
   LucideArrowLeft,
   LucideArrowRight,
@@ -49,6 +49,12 @@ import {
 } from '@lucide/angular';
 import { finalize, forkJoin } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
+import {
+  formatArea,
+  formatCentroid,
+  formatCoordinate,
+  formatPerimeter,
+} from './site-summary-formatters';
 
 type InspectorTab = 'overview' | 'boundary' | 'analysis' | 'history';
 type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
@@ -88,6 +94,7 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectsApi = inject(ProjectsApiService);
   private readonly sitesApi = inject(SitesApiService);
+  private summaryRequestSequence = 0;
 
   protected readonly project = signal<Project | null>(null);
   protected readonly sites = signal<Site[]>([]);
@@ -115,11 +122,18 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly pendingBoundary = signal<GeoJsonPolygon | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly apiErrorState = signal<string | null>(null);
+  protected readonly siteSummary = signal<SiteSummary | null>(null);
+  protected readonly summaryLoading = signal(false);
+  protected readonly summaryErrorMessage = signal<string | null>(null);
   protected readonly createErrorMessage = signal<string | null>(null);
   protected readonly searchQuery = signal('');
   protected readonly hiddenSiteIds = signal<ReadonlySet<string>>(new Set());
   protected readonly activeInspectorTab = signal<InspectorTab>('overview');
   protected readonly renaming = signal(false);
+  protected readonly formatArea = formatArea;
+  protected readonly formatCentroid = formatCentroid;
+  protected readonly formatCoordinate = formatCoordinate;
+  protected readonly formatPerimeter = formatPerimeter;
 
   protected readonly filteredSites = computed(() => {
     const query = this.searchQuery().trim().toLocaleLowerCase();
@@ -250,6 +264,7 @@ export class ProjectDetailsComponent implements OnInit {
               : currentProject,
           );
           this.selectedSiteId.set(site.id);
+          this.loadSiteSummary(site.id);
           this.siteForm.reset({ name: '' });
           this.pendingBoundary.set(null);
           this.createModalOpen.set(false);
@@ -276,6 +291,7 @@ export class ProjectDetailsComponent implements OnInit {
       this.discardBoundaryDraft();
       this.renaming.set(false);
       this.activeInspectorTab.set('overview');
+      this.mapComponent?.clearHighlightedPosition();
     }
 
     if (this.hiddenSiteIds().has(site.id)) {
@@ -287,6 +303,7 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     this.selectedSiteId.set(site.id);
+    this.loadSiteSummary(site.id);
     setTimeout(() => this.mapComponent?.fitToGeometry(site.boundary));
   }
 
@@ -367,6 +384,29 @@ export class ProjectDetailsComponent implements OnInit {
 
   protected selectInspectorTab(tab: InspectorTab): void {
     this.activeInspectorTab.set(tab);
+
+    const site = this.selectedSite();
+
+    if (tab === 'overview' && site && !this.siteSummary()) {
+      this.loadSiteSummary(site.id);
+    }
+  }
+
+  protected retrySiteSummary(siteId: string): void {
+    this.loadSiteSummary(siteId);
+  }
+
+  protected highlightCentroid(summary: SiteSummary): void {
+    const centroid = summary.location.centroid;
+
+    if (!centroid) {
+      return;
+    }
+
+    this.mapComponent?.highlightPosition([
+      centroid.longitude,
+      centroid.latitude,
+    ]);
   }
 
   protected startRenaming(site: Site): void {
@@ -462,7 +502,9 @@ export class ProjectDetailsComponent implements OnInit {
           this.replaceSite(updatedSite);
           this.unsavedGeometry.set(null);
           this.editingSiteId.set(null);
+          this.mapComponent?.clearHighlightedPosition();
           this.mapComponent?.stopEditing();
+          this.loadSiteSummary(updatedSite.id);
         },
         error: (error: unknown) => {
           this.apiErrorState.set(
@@ -560,6 +602,9 @@ export class ProjectDetailsComponent implements OnInit {
 
           if (this.selectedSiteId() === site.id) {
             this.selectedSiteId.set(null);
+            this.siteSummary.set(null);
+            this.summaryErrorMessage.set(null);
+            this.mapComponent?.clearHighlightedPosition();
           }
         },
         error: (error: unknown) => {
@@ -629,6 +674,10 @@ export class ProjectDetailsComponent implements OnInit {
     this.project.set(null);
     this.sites.set([]);
     this.selectedSiteId.set(null);
+    this.siteSummary.set(null);
+    this.summaryLoading.set(false);
+    this.summaryErrorMessage.set(null);
+    this.summaryRequestSequence += 1;
     this.discardBoundaryDraft();
     this.hiddenSiteIds.set(new Set());
 
@@ -681,6 +730,47 @@ export class ProjectDetailsComponent implements OnInit {
     this.sites.update((sites) =>
       sites.map((site) => (site.id === updatedSite.id ? updatedSite : site)),
     );
+  }
+
+  private loadSiteSummary(siteId: string): void {
+    const requestSequence = ++this.summaryRequestSequence;
+
+    this.siteSummary.set(null);
+    this.summaryLoading.set(true);
+    this.summaryErrorMessage.set(null);
+
+    this.sitesApi
+      .getSiteSummary(siteId)
+      .pipe(
+        finalize(() => {
+          if (requestSequence === this.summaryRequestSequence) {
+            this.summaryLoading.set(false);
+          }
+        }),
+      )
+      .subscribe({
+        next: (summary) => {
+          if (
+            requestSequence === this.summaryRequestSequence &&
+            this.selectedSiteId() === siteId
+          ) {
+            this.siteSummary.set(summary);
+          }
+        },
+        error: (error: unknown) => {
+          if (
+            requestSequence === this.summaryRequestSequence &&
+            this.selectedSiteId() === siteId
+          ) {
+            this.summaryErrorMessage.set(
+              getApiErrorMessage(
+                error,
+                'The site measurements could not be loaded.',
+              ),
+            );
+          }
+        },
+      });
   }
 
   private cloneBoundary(boundary: GeoJsonPolygon): GeoJsonPolygon {

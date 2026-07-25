@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import {
   CreateSiteRequest,
   Site,
+  SiteSummary,
   UpdateSiteBoundaryRequest,
   UpdateSiteRequest,
 } from '@frontend/models';
@@ -31,6 +32,12 @@ export class SitesApiService {
 
   getSite(siteId: string): Observable<Site> {
     return this.http.get<Site>(`${this.apiBaseUrl}/api/sites/${siteId}`);
+  }
+
+  getSiteSummary(siteId: string): Observable<SiteSummary> {
+    return this.http.get<SiteSummary>(
+      `${this.apiBaseUrl}/api/sites/${siteId}/summary`,
+    );
   }
 
   updateSite(siteId: string, request: UpdateSiteRequest): Observable<Site> {

@@ -2,6 +2,7 @@ using FormaGeo.Application.Sites.ArchiveSite;
 using FormaGeo.Application.Sites.Contracts;
 using FormaGeo.Application.Sites.DeleteSite;
 using FormaGeo.Application.Sites.GetSite;
+using FormaGeo.Application.Sites.GetSiteSummary;
 using FormaGeo.Application.Sites.Mapping;
 using FormaGeo.Application.Sites.RestoreSite;
 using FormaGeo.Application.Sites.UpdateSite;
@@ -17,6 +18,7 @@ public sealed class SitesController : ControllerBase
 {
     private readonly DeleteSiteHandler _deleteSiteHandler;
     private readonly GetSiteHandler _getSiteHandler;
+    private readonly GetSiteSummaryHandler _getSiteSummaryHandler;
     private readonly UpdateSiteHandler _updateSiteHandler;
     private readonly UpdateSiteBoundaryHandler _updateSiteBoundaryHandler;
     private readonly ArchiveSiteHandler _archiveSiteHandler;
@@ -25,6 +27,7 @@ public sealed class SitesController : ControllerBase
     public SitesController(
         DeleteSiteHandler deleteSiteHandler,
         GetSiteHandler getSiteHandler,
+        GetSiteSummaryHandler getSiteSummaryHandler,
         UpdateSiteHandler updateSiteHandler,
         UpdateSiteBoundaryHandler updateSiteBoundaryHandler,
         ArchiveSiteHandler archiveSiteHandler,
@@ -32,6 +35,7 @@ public sealed class SitesController : ControllerBase
     {
         _deleteSiteHandler = deleteSiteHandler;
         _getSiteHandler = getSiteHandler;
+        _getSiteSummaryHandler = getSiteSummaryHandler;
         _updateSiteHandler = updateSiteHandler;
         _updateSiteBoundaryHandler = updateSiteBoundaryHandler;
         _archiveSiteHandler = archiveSiteHandler;
@@ -63,6 +67,35 @@ public sealed class SitesController : ControllerBase
         }
 
         return Ok(site);
+    }
+
+    [HttpGet("{siteId:guid}/summary", Name = "GetSiteSummary")]
+    [EndpointSummary("Get a site spatial summary")]
+    [EndpointDescription(
+        "Returns geodesic area and perimeter measurements, centroid, bounds, and geometry quality information.")]
+    [ProducesResponseType(
+        typeof(SiteSummaryResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SiteSummaryResponse>>
+        GetSiteSummaryAsync(
+            Guid siteId,
+            CancellationToken cancellationToken)
+    {
+        var summary =
+            await _getSiteSummaryHandler.HandleAsync(
+                siteId,
+                cancellationToken);
+
+        if (summary is null)
+        {
+            return NotFound(new
+            {
+                error = $"Site '{siteId}' was not found."
+            });
+        }
+
+        return Ok(summary);
     }
 
     [HttpPatch("{siteId:guid}", Name = "UpdateSite")]
