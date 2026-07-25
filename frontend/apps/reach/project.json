@@ -15,6 +15,9 @@
         "browser": "apps/reach/src/main.ts",
         "tsConfig": "apps/reach/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
+        "stylePreprocessorOptions": {
+          "includePaths": ["libs/shared"]
+        },
         "assets": [
           {
             "glob": "**/*",

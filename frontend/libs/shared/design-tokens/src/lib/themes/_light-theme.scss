@@ -1,0 +1,16 @@
+@mixin tokens {
+  --fg-text-primary: var(--fg-neutral-900);
+  --fg-text-secondary: var(--fg-neutral-600);
+  --fg-text-muted: var(--fg-neutral-500);
+  --fg-text-disabled: var(--fg-neutral-400);
+  --fg-text-inverse: var(--fg-neutral-0);
+  --fg-surface-page: var(--fg-neutral-50);
+  --fg-surface-primary: var(--fg-neutral-0);
+  --fg-surface-secondary: var(--fg-neutral-100);
+  --fg-surface-selected: var(--fg-brand-50);
+  --fg-surface-map-control: rgb(255 255 255 / 96%);
+  --fg-surface-map-dark: rgb(15 23 42 / 94%);
+  --fg-border-default: var(--fg-neutral-200);
+  --fg-border-strong: var(--fg-neutral-300);
+  --fg-border-active: var(--fg-brand-600);
+}

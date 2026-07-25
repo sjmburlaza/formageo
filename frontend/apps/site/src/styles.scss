@@ -1,17 +1,16 @@
+@use 'design-tokens';
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
 html {
   box-sizing: border-box;
   min-width: 20rem;
   min-height: 100%;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  background: #f5f7f5;
+  color: var(--fg-text-primary);
+  background: var(--fg-surface-page);
+  font-family: var(--fg-font-sans);
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 *,
@@ -23,10 +22,12 @@ html {
 body {
   min-height: 100%;
   margin: 0;
+  font: var(--fg-type-body-md);
 }
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -36,58 +37,103 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+button,
+input,
+select,
+textarea,
+a {
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--fg-focus-ring);
+  }
+}
+
+::selection {
+  color: var(--fg-brand-950);
+  background: var(--fg-brand-200);
+}
+
 .app-bar {
-  min-height: 4.25rem;
-  padding: 0 2rem;
+  position: relative;
+  z-index: var(--fg-z-sticky);
+  height: var(--fg-topbar-height);
+  padding: 0 var(--fg-space-8);
   display: flex;
   align-items: center;
-  border-bottom: 1px solid #dce3de;
-  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--fg-border-default);
+  background: rgb(255 255 255 / 96%);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  color: inherit;
-  font-weight: 750;
+  gap: var(--fg-space-3);
+  color: var(--fg-neutral-900);
+  font: var(--fg-type-heading-sm);
   letter-spacing: -0.02em;
   text-decoration: none;
 }
 
 .brand__mark {
+  position: relative;
   width: 2rem;
   height: 2rem;
   display: grid;
   place-items: center;
-  border-radius: 0.55rem;
-  color: #fff;
-  background: #19633c;
+  overflow: hidden;
+  border-radius: var(--fg-radius-md);
+  color: var(--fg-neutral-0);
+  background: var(--fg-brand-800);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 12%);
+  font-size: 0;
+}
+
+.brand__mark::before,
+.brand__mark::after {
+  position: absolute;
+  content: '';
+}
+
+.brand__mark::before {
+  width: 0.75rem;
+  height: 1.05rem;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  box-shadow: inset 0 0.32rem 0 -0.2rem currentColor;
+}
+
+.brand__mark::after {
+  width: 1.6rem;
+  height: 0.65rem;
+  right: -0.55rem;
+  bottom: -0.08rem;
+  border: 1px solid rgb(110 231 189 / 62%);
+  border-radius: 50%;
+  transform: rotate(-18deg);
 }
 
 .button {
-  min-height: 2.7rem;
-  padding: 0.7rem 1rem;
+  min-height: var(--fg-control-height-md);
+  padding: 0 var(--fg-space-4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: var(--fg-space-2);
   border: 1px solid transparent;
-  border-radius: 0.55rem;
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 700;
-  line-height: 1;
+  border-radius: var(--fg-radius-md);
+  font: var(--fg-type-label-md);
   text-decoration: none;
   cursor: pointer;
   transition:
-    transform 120ms ease,
-    background 120ms ease,
-    border-color 120ms ease;
+    color var(--fg-duration-fast) var(--fg-easing-standard),
+    background var(--fg-duration-fast) var(--fg-easing-standard),
+    border-color var(--fg-duration-fast) var(--fg-easing-standard),
+    box-shadow var(--fg-duration-fast) var(--fg-easing-standard);
 }
 
-.button:not(:disabled):hover {
-  transform: translateY(-1px);
+.button svg {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .button:disabled {
@@ -96,49 +142,100 @@ a {
 }
 
 .button--primary {
-  color: #fff;
-  background: #19633c;
-  border-color: #19633c;
+  color: var(--fg-text-inverse);
+  background: var(--fg-brand-600);
+  border-color: var(--fg-brand-600);
+  box-shadow: var(--fg-shadow-xs);
 }
 
-.button--primary:hover {
-  background: #104d2d;
-  border-color: #104d2d;
+.button--primary:hover:not(:disabled) {
+  background: var(--fg-brand-700);
+  border-color: var(--fg-brand-700);
 }
 
 .button--secondary {
-  color: #25382c;
-  background: #fff;
-  border-color: #cbd6ce;
+  color: var(--fg-neutral-700);
+  background: var(--fg-surface-primary);
+  border-color: var(--fg-border-strong);
+  box-shadow: var(--fg-shadow-xs);
 }
 
-.button--secondary:hover {
-  border-color: #8da496;
-  background: #f7faf8;
+.button--secondary:hover:not(:disabled) {
+  border-color: var(--fg-neutral-400);
+  background: var(--fg-neutral-50);
+}
+
+.button--tertiary {
+  color: var(--fg-brand-700);
+  background: transparent;
+}
+
+.button--tertiary:hover:not(:disabled) {
+  background: var(--fg-brand-50);
 }
 
 .button--danger {
-  color: #a0372e;
-  background: #fff;
-  border-color: #e4c3bf;
+  color: var(--fg-error-text);
+  background: var(--fg-surface-primary);
+  border-color: var(--fg-error-border);
 }
 
-.button--danger:hover {
-  background: #fff5f3;
-  border-color: #c9837c;
+.button--danger:hover:not(:disabled) {
+  color: var(--fg-neutral-0);
+  background: var(--fg-error);
+  border-color: var(--fg-error);
 }
 
 .button--full {
   width: 100%;
 }
 
-:focus-visible {
-  outline: 3px solid rgba(41, 113, 70, 0.32);
-  outline-offset: 2px;
+.sr-only,
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-@media (max-width: 680px) {
+.spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--fg-neutral-200);
+  border-top-color: var(--fg-brand-600);
+  border-radius: var(--fg-radius-full);
+  animation: fg-spin 750ms linear infinite;
+}
+
+.state-actions {
+  display: flex;
+  gap: var(--fg-space-3);
+}
+
+@keyframes fg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 42.5rem) {
   .app-bar {
-    padding-inline: 1rem;
+    padding-inline: var(--fg-space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

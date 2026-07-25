@@ -15,12 +15,28 @@ import {
 import { RouterLink } from '@angular/router';
 import { getApiErrorMessage, ProjectsApiService } from '@frontend/api-client';
 import { Project } from '@frontend/models';
+import {
+  LucideArrowRight,
+  LucideCircleAlert,
+  LucideEllipsis,
+  LucideLandPlot,
+  LucidePlus,
+} from '@lucide/angular';
 import { finalize } from 'rxjs';
 
 @Component({
   selector: 'fg-project-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    LucideArrowRight,
+    LucideCircleAlert,
+    LucideEllipsis,
+    LucideLandPlot,
+    LucidePlus,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
   templateUrl: './project-list.component.html',
   styleUrl: './project-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

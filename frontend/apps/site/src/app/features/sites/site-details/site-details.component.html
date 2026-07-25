@@ -14,7 +14,7 @@
     </section>
   } @else if (!site()) {
     <section class="page-state" role="alert">
-      <span class="error-icon" aria-hidden="true">!</span>
+      <svg class="error-icon" lucideCircleAlert aria-hidden="true"></svg>
       <h1>Unable to open site</h1>
       <p>{{ errorMessage() }}</p>
       <div class="state-actions">
@@ -29,7 +29,7 @@
   } @else {
     <div class="site-shell">
       <a class="back-link" [routerLink]="['/projects', site()!.projectId]">
-        <span aria-hidden="true">←</span>
+        <svg lucideArrowLeft aria-hidden="true"></svg>
         Back to project
       </a>
 
@@ -37,7 +37,16 @@
         <div>
           <p class="eyebrow">Site boundary</p>
           <h1>{{ site()!.name }}</h1>
-          <p>Created {{ site()!.createdAtUtc | date: 'medium' }}</p>
+          <div class="site-header__metadata">
+            <span
+              class="status-badge"
+              [class.status-badge--archived]="site()!.status === 'Archived'"
+            >
+              <i aria-hidden="true"></i>
+              {{ site()!.status }}
+            </span>
+            <span>Created {{ site()!.createdAtUtc | date: 'medium' }}</span>
+          </div>
         </div>
         <button
           class="button button--danger"
@@ -45,6 +54,7 @@
           [disabled]="deleting()"
           (click)="deleteSite()"
         >
+          <svg lucideTrash2 aria-hidden="true"></svg>
           {{ deleting() ? 'Deleting…' : 'Delete site' }}
         </button>
       </header>

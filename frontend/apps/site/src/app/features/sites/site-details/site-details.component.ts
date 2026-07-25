@@ -9,12 +9,23 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { getApiErrorMessage, SitesApiService } from '@frontend/api-client';
 import { Site } from '@frontend/models';
+import {
+  LucideArrowLeft,
+  LucideCircleAlert,
+  LucideTrash2,
+} from '@lucide/angular';
 import { finalize } from 'rxjs';
 
 @Component({
   selector: 'fg-site-details',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [
+    CommonModule,
+    LucideArrowLeft,
+    LucideCircleAlert,
+    LucideTrash2,
+    RouterLink,
+  ],
   templateUrl: './site-details.component.html',
   styleUrl: './site-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

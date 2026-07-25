@@ -31,6 +31,22 @@ import {
   MapInteractionMode,
 } from '@frontend/map';
 import { GeoJsonPolygon, Project, Site } from '@frontend/models';
+import {
+  LucideArrowLeft,
+  LucideArrowRight,
+  LucideChartNoAxesCombined,
+  LucideCircleAlert,
+  LucideCircleCheck,
+  LucideColumns3,
+  LucideEye,
+  LucideEyeOff,
+  LucideFileText,
+  LucideLandPlot,
+  LucidePenTool,
+  LucideSearch,
+  LucideUpload,
+  LucideX,
+} from '@lucide/angular';
 import { finalize, forkJoin } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 
@@ -40,7 +56,26 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
 @Component({
   selector: 'fg-project-details',
   standalone: true,
-  imports: [CommonModule, MapComponent, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    LucideArrowLeft,
+    LucideArrowRight,
+    LucideChartNoAxesCombined,
+    LucideCircleAlert,
+    LucideCircleCheck,
+    LucideColumns3,
+    LucideEye,
+    LucideEyeOff,
+    LucideFileText,
+    LucideLandPlot,
+    LucidePenTool,
+    LucideSearch,
+    LucideUpload,
+    LucideX,
+    MapComponent,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
