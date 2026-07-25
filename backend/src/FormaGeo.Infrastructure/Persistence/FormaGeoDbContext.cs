@@ -1,3 +1,4 @@
+using FormaGeo.Domain.Analyses;
 using FormaGeo.Domain.Layers;
 using FormaGeo.Domain.Projects;
 using FormaGeo.Domain.Sites;
@@ -16,6 +17,8 @@ public sealed class FormaGeoDbContext : DbContext
     public DbSet<Project> Projects => Set<Project>();
 
     public DbSet<Site> Sites => Set<Site>();
+
+    public DbSet<AnalysisRun> AnalysisRuns => Set<AnalysisRun>();
 
     public DbSet<DataSource> DataSources => Set<DataSource>();
 

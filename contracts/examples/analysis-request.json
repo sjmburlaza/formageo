@@ -1,0 +1,21 @@
+{
+  "analysisId": "d8df8ca8-95b8-48d4-b7dc-302c39453460",
+  "siteId": "3d54654c-6aa8-48cb-adb4-79e174f4ef24",
+  "analysisType": "HazardExposure",
+  "analysisVersion": "1.0.0",
+  "siteGeometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [120.98, 14.55],
+        [121.015, 14.55],
+        [121.015, 14.575],
+        [120.98, 14.575],
+        [120.98, 14.55]
+      ]
+    ]
+  },
+  "inputParameters": {
+    "minimumOverlapPercent": 0
+  }
+}

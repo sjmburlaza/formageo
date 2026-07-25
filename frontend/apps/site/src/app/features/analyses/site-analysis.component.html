@@ -1,0 +1,329 @@
+<section class="analysis-panel" aria-labelledby="analysis-title">
+  <header class="analysis-heading">
+    <div>
+      <p class="analysis-eyebrow">Analysis catalog</p>
+      <h3 id="analysis-title">Run spatial analysis</h3>
+    </div>
+    @if (runs().length > 0) {
+      <span class="run-count">{{ runs().length }}</span>
+    }
+  </header>
+
+  <p class="analysis-intro">
+    Requests continue in the background. You can leave this site and return
+    without losing progress.
+  </p>
+
+  @if (catalogLoading()) {
+    <div class="analysis-loading" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      Loading catalog…
+    </div>
+  } @else if (catalogError()) {
+    <div class="analysis-error" role="alert">
+      <svg lucideCircleAlert aria-hidden="true"></svg>
+      <p>{{ catalogError() }}</p>
+      <button type="button" (click)="retryCatalog()">Try again</button>
+    </div>
+  } @else {
+    <div class="analysis-catalog">
+      @for (definition of catalog(); track definition.analysisType) {
+        <article
+          class="analysis-card"
+          [class.analysis-card--selected]="
+            selectedDefinition()?.analysisType === definition.analysisType
+          "
+        >
+          <div class="analysis-card__heading">
+            <span class="analysis-card__icon" aria-hidden="true">
+              <svg lucideChartNoAxesCombined></svg>
+            </span>
+            <div>
+              <h4>{{ definition.name }}</h4>
+              <span>{{ definition.estimatedComplexity }} complexity</span>
+            </div>
+            @if (latestRun(definition.analysisType); as latest) {
+              <button
+                class="analysis-status"
+                type="button"
+                [class]="statusClass(latest.status)"
+                (click)="selectRun(latest)"
+              >
+                {{ latest.status }}
+              </button>
+            }
+          </div>
+          <p>{{ definition.description }}</p>
+          <div class="analysis-requirements">
+            <strong>Uses</strong>
+            <span>{{ definition.requiredInputs.join(' · ') }}</span>
+          </div>
+          <footer>
+            <span>v{{ definition.analysisVersion }}</span>
+            <button
+              type="button"
+              [disabled]="submittingType() !== null"
+              (click)="openRequestForm(definition)"
+            >
+              Run analysis
+            </button>
+          </footer>
+        </article>
+      }
+    </div>
+  }
+
+  @if (selectedDefinition(); as definition) {
+    <section
+      class="request-form"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="request-form-title"
+    >
+      <div class="request-form__heading">
+        <div>
+          <span>New request</span>
+          <h4 id="request-form-title">{{ definition.name }}</h4>
+        </div>
+        <button
+          type="button"
+          aria-label="Close analysis form"
+          [disabled]="submittingType() !== null"
+          (click)="closeRequestForm()"
+        >
+          <svg lucideX aria-hidden="true"></svg>
+        </button>
+      </div>
+
+      <div class="automatic-input">
+        <svg lucideCircleCheck aria-hidden="true"></svg>
+        <div>
+          <strong>Site boundary ready</strong>
+          <span>{{ site.name }} · EPSG:4326</span>
+        </div>
+      </div>
+
+      @for (parameter of definition.parameters; track parameter.name) {
+        @if (parameter.type === 'boolean') {
+          <label class="parameter-toggle">
+            <input
+              type="checkbox"
+              [checked]="parameterValue(parameter)"
+              (change)="updateParameter(parameter, $event)"
+            />
+            <span>
+              <strong>{{ parameter.label }}</strong>
+              <small>{{ parameter.description }}</small>
+            </span>
+          </label>
+        } @else {
+          <label class="parameter-field">
+            <span>{{ parameter.label }}</span>
+            <input
+              [type]="parameter.type === 'number' ? 'number' : 'text'"
+              [value]="parameterValue(parameter)"
+              [attr.min]="parameter.minimum"
+              [attr.max]="parameter.maximum"
+              [attr.step]="parameter.type === 'number' ? '1' : null"
+              (input)="updateParameter(parameter, $event)"
+            />
+            <small>{{ parameter.description }}</small>
+          </label>
+        }
+      }
+
+      @if (definition.parameters.length === 0) {
+        <p class="no-parameters">
+          No additional parameters are required for this analysis.
+        </p>
+      }
+
+      @if (requestError()) {
+        <p class="request-error" role="alert">{{ requestError() }}</p>
+      }
+
+      <button
+        class="submit-analysis"
+        type="button"
+        [disabled]="submittingType() !== null"
+        (click)="submitAnalysis()"
+      >
+        {{
+          submittingType() === definition.analysisType
+            ? 'Submitting request…'
+            : 'Run analysis'
+        }}
+      </button>
+    </section>
+  }
+
+  @if (requestError() && !selectedDefinition()) {
+    <div class="analysis-error" role="alert">
+      <svg lucideCircleAlert aria-hidden="true"></svg>
+      <p>{{ requestError() }}</p>
+      <button type="button" (click)="requestError.set(null)">Dismiss</button>
+    </div>
+  }
+
+  @if (selectedRun(); as run) {
+    <section
+      class="status-panel"
+      [class]="statusClass(run.status)"
+      aria-labelledby="analysis-status-title"
+    >
+      <header>
+        <span class="status-symbol" aria-hidden="true">
+          @if (run.status === 'Completed') {
+            <svg lucideCircleCheck></svg>
+          } @else if (run.status === 'Failed') {
+            <svg lucideCircleAlert></svg>
+          } @else if (run.status === 'Cancelled') {
+            <svg lucideX></svg>
+          } @else {
+            <svg lucideClock3></svg>
+          }
+        </span>
+        <div>
+          <span>{{ definitionName(run.analysisType) }}</span>
+          <h4 id="analysis-status-title">{{ run.status }}</h4>
+        </div>
+        <small>v{{ run.analysisVersion }}</small>
+      </header>
+
+      @if (run.status === 'Pending' || run.status === 'Running') {
+        <div
+          class="analysis-progress"
+          role="progressbar"
+          [attr.aria-label]="run.status + ' analysis'"
+        >
+          <i></i>
+        </div>
+      }
+
+      <p class="status-message">{{ statusMessage(run) }}</p>
+
+      @if (run.status === 'Completed' && run.result) {
+        <p class="result-summary">
+          {{ run.result.summary || 'Analysis completed.' }}
+        </p>
+        @if (resultMetrics(run).length > 0) {
+          <dl class="result-metrics">
+            @for (metric of resultMetrics(run); track metric[0]) {
+              <div>
+                <dt>{{ metricLabel(metric[0]) }}</dt>
+                <dd>{{ metricValue(metric[1]) }}</dd>
+              </div>
+            }
+          </dl>
+        }
+        @if (run.result.resultGeometry) {
+          <button
+            class="result-download"
+            type="button"
+            (click)="downloadResultGeometry(run)"
+          >
+            <svg lucideDownload aria-hidden="true"></svg>
+            Download result GeoJSON
+          </button>
+        }
+      }
+
+      @if (run.status === 'Failed') {
+        <div class="failure-reason" role="alert">
+          <strong>Failure reason</strong>
+          <p>
+            {{
+              run.errorMessage ||
+                'No diagnostic message was returned. Retry the analysis.'
+            }}
+          </p>
+        </div>
+      }
+
+      <footer>
+        <span>
+          Requested {{ run.requestedAtUtc | date: 'medium' }}
+        </span>
+        <div>
+          @if (canCancel(run)) {
+            <button
+              class="status-action status-action--cancel"
+              type="button"
+              [disabled]="cancellingId() === run.id"
+              (click)="cancelRun(run)"
+            >
+              {{
+                cancellingId() === run.id ? 'Cancelling…' : 'Cancel'
+              }}
+            </button>
+          }
+          @if (run.status === 'Failed' || run.status === 'Cancelled') {
+            <button
+              class="status-action"
+              type="button"
+              [disabled]="submittingType() !== null"
+              (click)="retryRun(run)"
+            >
+              <svg lucideRotateCcw aria-hidden="true"></svg>
+              {{
+                submittingType() === run.analysisType
+                  ? 'Retrying…'
+                  : 'Retry'
+              }}
+            </button>
+          }
+        </div>
+      </footer>
+    </section>
+  }
+
+  <section class="analysis-history" aria-labelledby="analysis-history-title">
+    <header>
+      <div>
+        <svg lucideHistory aria-hidden="true"></svg>
+        <h4 id="analysis-history-title">Previous analyses</h4>
+      </div>
+      @if (runs().length > 0) {
+        <span>{{ runs().length }} total</span>
+      }
+    </header>
+
+    @if (historyLoading()) {
+      <div class="analysis-loading" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        Loading history…
+      </div>
+    } @else if (historyError()) {
+      <div class="analysis-error" role="alert">
+        <p>{{ historyError() }}</p>
+        <button type="button" (click)="retryHistory()">Try again</button>
+      </div>
+    } @else if (runs().length === 0) {
+      <p class="history-empty">
+        No previous analyses. Choose a catalog card to create the first run.
+      </p>
+    } @else {
+      <ol>
+        @for (run of runs(); track run.id) {
+          <li>
+            <button
+              type="button"
+              [class.history-run--selected]="selectedRun().id === run.id"
+              (click)="selectRun(run)"
+            >
+              <i [class]="statusClass(run.status)" aria-hidden="true"></i>
+              <span>
+                <strong>{{ definitionName(run.analysisType) }}</strong>
+                <small>
+                  {{ run.requestedAtUtc | date: 'medium' }} ·
+                  {{ run.status }}
+                </small>
+              </span>
+              <em>v{{ run.analysisVersion }}</em>
+            </button>
+          </li>
+        }
+      </ol>
+    }
+  </section>
+</section>

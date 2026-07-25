@@ -8,12 +8,17 @@ version = "0.1.0"
 description = "Geospatial processing tools for the FormaGeo platform"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.116,<1",
     "geopandas",
     "shapely",
     "pyproj",
     "sqlalchemy",
-    "psycopg[binary]"
+    "psycopg[binary]",
+    "uvicorn[standard]>=0.35,<1"
 ]
+
+[project.scripts]
+formageo-geoprocessing = "formageo.service:main"
 
 [project.optional-dependencies]
 dev = [
