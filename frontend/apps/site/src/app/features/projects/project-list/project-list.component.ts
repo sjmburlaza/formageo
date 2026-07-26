@@ -15,9 +15,9 @@ import {
 import { RouterLink } from '@angular/router';
 import { getApiErrorMessage, ProjectsApiService } from '@frontend/api-client';
 import { Project } from '@frontend/models';
+import { AlertComponent, EmptyStateComponent } from '@frontend/ui';
 import {
   LucideArrowRight,
-  LucideCircleAlert,
   LucideEllipsis,
   LucideLandPlot,
   LucidePlus,
@@ -28,9 +28,10 @@ import { finalize } from 'rxjs';
   selector: 'fg-project-list',
   standalone: true,
   imports: [
+    AlertComponent,
     CommonModule,
+    EmptyStateComponent,
     LucideArrowRight,
-    LucideCircleAlert,
     LucideEllipsis,
     LucideLandPlot,
     LucidePlus,

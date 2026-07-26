@@ -30,6 +30,11 @@ import {
   Site,
 } from '@frontend/models';
 import {
+  AlertComponent,
+  EmptyStateComponent,
+  PageStateComponent,
+} from '@frontend/ui';
+import {
   LucideArrowLeft,
   LucideChartNoAxesCombined,
   LucideCheck,
@@ -37,8 +42,6 @@ import {
   LucideCircleAlert,
   LucideCircleHelp,
   LucideCopy,
-  LucideFlaskConical,
-  LucideInfo,
   LucideMap,
   LucidePlus,
   LucideSave,
@@ -57,7 +60,9 @@ type EditableCriterion = SaveScoringCriterion & {
   selector: 'fg-scoring-builder',
   standalone: true,
   imports: [
+    AlertComponent,
     CommonModule,
+    EmptyStateComponent,
     FormsModule,
     LucideArrowLeft,
     LucideChartNoAxesCombined,
@@ -66,14 +71,13 @@ type EditableCriterion = SaveScoringCriterion & {
     LucideCircleAlert,
     LucideCircleHelp,
     LucideCopy,
-    LucideFlaskConical,
-    LucideInfo,
     LucideMap,
     LucidePlus,
     LucideSave,
     LucideSparkles,
     LucideTrash2,
     MapComponent,
+    PageStateComponent,
     RouterLink,
   ],
   templateUrl: './scoring-builder.component.html',

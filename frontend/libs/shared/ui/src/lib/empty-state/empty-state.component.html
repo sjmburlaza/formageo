@@ -1,0 +1,43 @@
+<section
+  class="empty-state"
+  [class.empty-state--bordered]="appearance() === 'bordered'"
+  [class.empty-state--compact]="compact()"
+>
+  <span class="empty-state__icon" aria-hidden="true">
+    @switch (icon()) {
+      @case ('data') {
+        <svg lucideDatabase></svg>
+      }
+      @case ('map') {
+        <svg lucideMapPinOff></svg>
+      }
+      @case ('projects') {
+        <svg lucideLandPlot></svg>
+      }
+      @case ('search') {
+        <svg lucideSearchX></svg>
+      }
+      @case ('terrain') {
+        <svg lucideMountain></svg>
+      }
+      @default {
+        <svg lucideLayers3></svg>
+      }
+    }
+  </span>
+
+  @switch (headingLevel()) {
+    @case (2) {
+      <h2>{{ title() }}</h2>
+    }
+    @case (4) {
+      <h4>{{ title() }}</h4>
+    }
+    @default {
+      <h3>{{ title() }}</h3>
+    }
+  }
+
+  <p>{{ description() }}</p>
+  <div class="empty-state__actions"><ng-content /></div>
+</section>

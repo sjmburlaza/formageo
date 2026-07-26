@@ -99,17 +99,21 @@
       </div>
     } @else if (activeTab() === 'overview') {
       @if (completedCoreCount() === 0) {
-        <section class="analysis-empty">
-          <span aria-hidden="true"><svg lucideLayers3></svg></span>
-          <h4>No core assessment results yet</h4>
-          <p>
-            Run the core assessment to check five hazard and environmental
-            conditions, planning context, and terrain statistics.
-          </p>
-          <button type="button" (click)="runCoreAssessment()">
+        <fg-empty-state
+          appearance="bordered"
+          icon="layers"
+          title="No core assessment results yet"
+          description="Run the core assessment to check five hazard and environmental conditions, planning context, and terrain statistics."
+          [headingLevel]="4"
+        >
+          <button
+            class="run-assessment"
+            type="button"
+            (click)="runCoreAssessment()"
+          >
             Run core assessment
           </button>
-        </section>
+        </fg-empty-state>
       } @else {
         @if (notableEvidence().length > 0) {
           <div class="warning-banner" role="alert">
@@ -202,10 +206,14 @@
       }
     } @else if (activeTab() === 'hazards') {
       @if (evidenceFor('Hazards').length === 0) {
-        <section class="analysis-empty analysis-empty--compact">
-          <h4>Hazard evidence is not available</h4>
-          <p>Run the core assessment to calculate mapped exposures.</p>
-        </section>
+        <fg-empty-state
+          appearance="bordered"
+          icon="map"
+          title="Hazard evidence is not available"
+          description="Run the core assessment to calculate mapped exposures."
+          [headingLevel]="4"
+          [compact]="true"
+        />
       } @else {
         <div class="result-card-list">
           @for (result of evidenceFor('Hazards'); track result.id) {
@@ -298,10 +306,14 @@
       }
     } @else if (activeTab() === 'planning') {
       @if (evidenceFor('Planning').length === 0) {
-        <section class="analysis-empty analysis-empty--compact">
-          <h4>Planning evidence is not available</h4>
-          <p>Run the core assessment to calculate planning intersections.</p>
-        </section>
+        <fg-empty-state
+          appearance="bordered"
+          icon="layers"
+          title="Planning evidence is not available"
+          description="Run the core assessment to calculate planning intersections."
+          [headingLevel]="4"
+          [compact]="true"
+        />
       } @else {
         <div class="result-card-list">
           @for (result of evidenceFor('Planning'); track result.id) {
@@ -424,48 +436,40 @@
       }
     } @else if (activeTab() === 'terrain') {
       @if (evidenceFor('Terrain').length === 0) {
-        <section class="analysis-empty analysis-empty--compact">
-          <h4>Terrain evidence is not available</h4>
-          <p>Run the core assessment to calculate elevation and slope.</p>
-        </section>
+        <fg-empty-state
+          appearance="bordered"
+          icon="terrain"
+          title="Terrain evidence is not available"
+          description="Run the core assessment to calculate elevation and slope."
+          [headingLevel]="4"
+          [compact]="true"
+        />
       } @else {
         <div class="terrain-metrics">
-          <article>
-            <span>Minimum elevation</span>
-            <strong>
-              {{ metric(terrainMetrics(), 'minimumElevationMetres') }} m
-            </strong>
-          </article>
-          <article>
-            <span>Maximum elevation</span>
-            <strong>
-              {{ metric(terrainMetrics(), 'maximumElevationMetres') }} m
-            </strong>
-          </article>
-          <article>
-            <span>Average elevation</span>
-            <strong>
-              {{ metric(terrainMetrics(), 'averageElevationMetres') }} m
-            </strong>
-          </article>
-          <article>
-            <span>Average slope</span>
-            <strong>
-              {{ metric(terrainMetrics(), 'averageSlopeDegrees') }}°
-            </strong>
-          </article>
-          <article>
-            <span>Steep-area percentage</span>
-            <strong>
-              {{ metric(terrainMetrics(), 'steepAreaPercent') }}%
-            </strong>
-          </article>
-          <article>
-            <span>Terrain coverage</span>
-            <strong>
-              {{ metric(terrainMetrics(), 'coveragePercent') }}%
-            </strong>
-          </article>
+          <fg-metric-card
+            label="Minimum elevation"
+            [value]="metric(terrainMetrics(), 'minimumElevationMetres') + ' m'"
+          />
+          <fg-metric-card
+            label="Maximum elevation"
+            [value]="metric(terrainMetrics(), 'maximumElevationMetres') + ' m'"
+          />
+          <fg-metric-card
+            label="Average elevation"
+            [value]="metric(terrainMetrics(), 'averageElevationMetres') + ' m'"
+          />
+          <fg-metric-card
+            label="Average slope"
+            [value]="metric(terrainMetrics(), 'averageSlopeDegrees') + '°'"
+          />
+          <fg-metric-card
+            label="Steep-area percentage"
+            [value]="metric(terrainMetrics(), 'steepAreaPercent') + '%'"
+          />
+          <fg-metric-card
+            label="Terrain coverage"
+            [value]="metric(terrainMetrics(), 'coveragePercent') + '%'"
+          />
         </div>
 
         @for (result of evidenceFor('Terrain'); track result.id) {
@@ -528,10 +532,14 @@
       }
     } @else {
       @if (sources().length === 0) {
-        <section class="analysis-empty analysis-empty--compact">
-          <h4>No source metadata yet</h4>
-          <p>Source records will appear with completed core results.</p>
-        </section>
+        <fg-empty-state
+          appearance="bordered"
+          icon="data"
+          title="No source metadata yet"
+          description="Source records will appear with completed core results."
+          [headingLevel]="4"
+          [compact]="true"
+        />
       } @else {
         <div class="source-list">
           @for (source of sources(); track source.id) {

@@ -29,52 +29,6 @@
   gap: var(--fg-space-2);
 }
 
-.metric-card {
-  min-width: 0;
-  padding: var(--fg-space-3);
-  display: grid;
-  gap: var(--fg-space-1);
-  border: 1px solid var(--fg-border-default);
-  border-radius: var(--fg-radius-md);
-  background: var(--fg-surface-primary);
-}
-
-.metric-card > span {
-  color: var(--fg-text-muted);
-  font: var(--fg-type-label-sm);
-  text-transform: uppercase;
-}
-
-.metric-card strong,
-.metric-card button {
-  overflow: hidden;
-  color: var(--fg-text-primary);
-  font: var(--fg-type-label-md);
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.metric-card button {
-  padding: 0;
-  border: 0;
-  color: var(--fg-brand-700);
-  background: transparent;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 0.2rem;
-}
-
-.metric-card--invalid {
-  border-color: var(--fg-error-border);
-  background: var(--fg-error-bg);
-}
-
-.metric-card--invalid strong {
-  color: var(--fg-error-text);
-}
-
 .summary-details {
   margin: var(--fg-space-3) 0 0;
 }

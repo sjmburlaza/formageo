@@ -8,20 +8,22 @@
   </nav>
 
   @if (loading()) {
-    <section class="page-state" aria-live="polite">
-      <span class="spinner" aria-hidden="true"></span>
-      <h1>Opening scoring builder</h1>
-      <p>Loading criteria, presets, and saved scenarios…</p>
-    </section>
+    <fg-page-state
+      title="Opening scoring builder"
+      description="Loading criteria, presets, and saved scenarios…"
+    />
   } @else if (!site() || !catalog()) {
-    <section class="page-state" role="alert">
-      <svg lucideCircleAlert aria-hidden="true"></svg>
-      <h1>Unable to open suitability scoring</h1>
-      <p>{{ errorMessage() }}</p>
+    <fg-page-state
+      tone="error"
+      title="Unable to open suitability scoring"
+      [description]="
+        errorMessage() ?? 'Suitability scoring could not be loaded.'
+      "
+    >
       <a class="button button--secondary" routerLink="/projects">
         Back to projects
       </a>
-    </section>
+    </fg-page-state>
   } @else {
     <div class="scoring-shell">
       <a class="back-link" [routerLink]="['/sites', site()!.id]">
@@ -72,19 +74,20 @@
       </header>
 
       @if (errorMessage()) {
-        <div class="message message--error" role="alert">
-          <svg lucideCircleAlert aria-hidden="true"></svg>
-          <span>{{ errorMessage() }}</span>
-          <button type="button" (click)="errorMessage.set(null)">
-            Dismiss
-          </button>
-        </div>
+        <fg-alert
+          class="builder-message"
+          tone="error"
+          [message]="errorMessage()!"
+          actionLabel="Dismiss"
+          (actionTriggered)="errorMessage.set(null)"
+        />
       }
       @if (noticeMessage()) {
-        <div class="message message--info" role="status">
-          <svg lucideInfo aria-hidden="true"></svg>
-          <span>{{ noticeMessage() }}</span>
-        </div>
+        <fg-alert
+          class="builder-message"
+          tone="info"
+          [message]="noticeMessage()!"
+        />
       }
 
       <section class="builder-grid" aria-label="Scoring builder">
@@ -317,11 +320,12 @@
                   </div>
                 </article>
               } @empty {
-                <div class="empty-criteria">
-                  <svg lucideFlaskConical aria-hidden="true"></svg>
-                  <h3>No criteria selected</h3>
-                  <p>Add at least one criterion to build a scoring model.</p>
-                </div>
+                <fg-empty-state
+                  icon="layers"
+                  title="No criteria selected"
+                  description="Add at least one criterion to build a scoring model."
+                  [compact]="true"
+                />
               }
             </div>
           </section>

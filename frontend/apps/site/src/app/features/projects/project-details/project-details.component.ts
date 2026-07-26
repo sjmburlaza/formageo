@@ -43,6 +43,13 @@ import {
   SiteSummary,
 } from '@frontend/models';
 import {
+  AlertComponent,
+  EmptyStateComponent,
+  MetricCardComponent,
+  PageStateComponent,
+  StatusBadgeComponent,
+} from '@frontend/ui';
+import {
   LucideArrowLeft,
   LucideArrowRight,
   LucideCircleAlert,
@@ -76,7 +83,9 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
   selector: 'fg-project-details',
   standalone: true,
   imports: [
+    AlertComponent,
     CommonModule,
+    EmptyStateComponent,
     LucideArrowLeft,
     LucideArrowRight,
     LucideCircleAlert,
@@ -91,10 +100,13 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
     LucideUpload,
     LucideX,
     MapComponent,
+    MetricCardComponent,
+    PageStateComponent,
     ReactiveFormsModule,
     RouterLink,
     SiteAnalysisComponent,
     SiteImportWizardComponent,
+    StatusBadgeComponent,
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',

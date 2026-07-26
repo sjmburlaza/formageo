@@ -1,6 +1,14 @@
-# ui
+# Shared UI
 
-This library was generated with [Nx](https://nx.dev).
+Reusable, presentation-only Angular components shared by FormaGeo frontends.
+
+The library currently exports:
+
+- `AlertComponent`
+- `EmptyStateComponent`
+- `MetricCardComponent`
+- `PageStateComponent`
+- `StatusBadgeComponent`
 
 ## Running unit tests
 

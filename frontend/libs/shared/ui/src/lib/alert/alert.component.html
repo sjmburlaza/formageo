@@ -1,0 +1,28 @@
+<div
+  class="alert"
+  [class]="'alert alert--' + tone()"
+  [attr.role]="tone() === 'error' ? 'alert' : 'status'"
+>
+  @switch (tone()) {
+    @case ('error') {
+      <svg lucideCircleAlert aria-hidden="true"></svg>
+    }
+    @case ('success') {
+      <svg lucideCircleCheck aria-hidden="true"></svg>
+    }
+    @case ('warning') {
+      <svg lucideTriangleAlert aria-hidden="true"></svg>
+    }
+    @default {
+      <svg lucideInfo aria-hidden="true"></svg>
+    }
+  }
+
+  <p>{{ message() }}</p>
+
+  @if (actionLabel()) {
+    <button type="button" (click)="actionTriggered.emit()">
+      {{ actionLabel() }}
+    </button>
+  }
+</div>

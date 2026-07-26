@@ -143,7 +143,11 @@
               <h3 id="review-title">Review detected features</h3>
               <p>{{ review.fileName }} · choose the features to import</p>
             </div>
-            <button class="text-button" type="button" (click)="selectAllFeatures()">
+            <button
+              class="text-button"
+              type="button"
+              (click)="selectAllFeatures()"
+            >
               Select all valid
             </button>
           </div>
@@ -157,7 +161,9 @@
               <span>Coordinate system</span>
               <strong>{{ review.detectedCoordinateSystem }}</strong>
             </article>
-            <article [class.summary-card--warning]="review.invalidFeatureCount > 0">
+            <article
+              [class.summary-card--warning]="review.invalidFeatureCount > 0"
+            >
               <span>Invalid</span>
               <strong>{{ review.invalidFeatureCount }}</strong>
             </article>
@@ -286,7 +292,9 @@
                 <input type="radio" formControlName="mode" value="Merge" />
                 <span>
                   <strong>Merge compatible polygons</strong>
-                  <small>Create one Site when boundaries touch or overlap.</small>
+                  <small
+                    >Create one Site when boundaries touch or overlap.</small
+                  >
                 </span>
               </label>
             </fieldset>
@@ -363,10 +371,7 @@
                 <p class="result-empty">No issues found.</p>
               } @else {
                 <ul class="result-list result-list--warnings">
-                  @for (
-                    skipped of importResult.skippedFeatures;
-                    track $index
-                  ) {
+                  @for (skipped of importResult.skippedFeatures; track $index) {
                     <li>
                       <svg lucideCircleAlert aria-hidden="true"></svg>
                       <span>
@@ -380,7 +385,9 @@
                   @for (warning of importResult.warnings; track warning) {
                     <li>
                       <svg lucideCircleAlert aria-hidden="true"></svg>
-                      <span><small>{{ warning }}</small></span>
+                      <span
+                        ><small>{{ warning }}</small></span
+                      >
                     </li>
                   }
                 </ul>
@@ -391,10 +398,11 @@
       }
 
       @if (errorMessage()) {
-        <div class="wizard-error" role="alert">
-          <svg lucideCircleAlert aria-hidden="true"></svg>
-          <p>{{ errorMessage() }}</p>
-        </div>
+        <fg-alert
+          class="wizard-error"
+          tone="error"
+          [message]="errorMessage()!"
+        />
       }
     </div>
 

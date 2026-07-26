@@ -58,13 +58,13 @@
     </section>
 
     @if (errorMessage()) {
-      <div class="page-error" role="alert">
-        <svg lucideCircleAlert aria-hidden="true"></svg>
-        <p>{{ errorMessage() }}</p>
-        @if (!loading()) {
-          <button type="button" (click)="loadProjects()">Try again</button>
-        }
-      </div>
+      <fg-alert
+        class="project-list-alert"
+        tone="error"
+        [message]="errorMessage()!"
+        [actionLabel]="loading() ? null : 'Try again'"
+        (actionTriggered)="loadProjects()"
+      />
     }
 
     <section class="project-list">
@@ -92,19 +92,16 @@
           }
         </div>
       } @else if (projects().length === 0) {
-        <div class="empty-state">
-          <span class="empty-state__icon" aria-hidden="true">
-            <svg lucideLandPlot></svg>
-          </span>
-          <h3>Create your first project</h3>
-          <p>
-            Organize candidate sites, analysis criteria, spatial data, and
-            reports inside a project.
-          </p>
+        <fg-empty-state
+          appearance="bordered"
+          icon="projects"
+          title="Create your first project"
+          description="Organize candidate sites, analysis criteria, spatial data, and reports inside a project."
+        >
           <a class="button button--secondary" href="#project-name">
             Create project
           </a>
-        </div>
+        </fg-empty-state>
       } @else {
         <ul class="project-grid">
           @for (project of projects(); track project.id) {

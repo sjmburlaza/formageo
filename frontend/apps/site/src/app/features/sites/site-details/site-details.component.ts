@@ -18,8 +18,12 @@ import {
   MapOverlayStateChange,
 } from '@frontend/map';
 import {
+  AlertComponent,
+  PageStateComponent,
+  StatusBadgeComponent,
+} from '@frontend/ui';
+import {
   LucideArrowLeft,
-  LucideCircleAlert,
   LucideChartNoAxesCombined,
   LucideTrash2,
 } from '@lucide/angular';
@@ -30,14 +34,16 @@ import { SiteAnalysisComponent } from '../../analyses/site-analysis.component';
   selector: 'fg-site-details',
   standalone: true,
   imports: [
+    AlertComponent,
     CommonModule,
     LucideArrowLeft,
-    LucideCircleAlert,
     LucideChartNoAxesCombined,
     LucideTrash2,
     MapComponent,
+    PageStateComponent,
     RouterLink,
     SiteAnalysisComponent,
+    StatusBadgeComponent,
   ],
   templateUrl: './site-details.component.html',
   styleUrl: './site-details.component.scss',

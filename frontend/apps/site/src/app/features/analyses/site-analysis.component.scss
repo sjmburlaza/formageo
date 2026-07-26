@@ -59,7 +59,6 @@ p {
 }
 
 .run-assessment,
-.analysis-empty button,
 .submit-analysis,
 .map-action,
 .status-action {
@@ -82,7 +81,6 @@ p {
 }
 
 .run-assessment svg,
-.analysis-empty button svg,
 .map-action svg,
 .status-action svg {
   width: 1rem;
@@ -226,50 +224,6 @@ p {
   background: var(--fg-warning-bg);
 }
 
-.analysis-empty {
-  min-height: 16rem;
-  padding: 2rem;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  border: 1px dashed var(--fg-border-strong);
-  border-radius: var(--fg-radius-lg);
-  color: var(--fg-neutral-500);
-  background: var(--fg-neutral-25);
-  text-align: center;
-}
-
-.analysis-empty > span {
-  width: 3rem;
-  height: 3rem;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--fg-brand-700);
-  background: var(--fg-brand-50);
-}
-
-.analysis-empty svg {
-  width: 1.35rem;
-  height: 1.35rem;
-}
-
-.analysis-empty h4 {
-  margin: 0.8rem 0 0.3rem;
-  color: var(--fg-neutral-800);
-  font: var(--fg-type-heading-sm);
-}
-
-.analysis-empty p {
-  max-width: 34rem;
-  margin: 0 0 1rem;
-  font: var(--fg-type-body-sm);
-}
-
-.analysis-empty--compact {
-  min-height: 10rem;
-}
-
 .overview-grid,
 .terrain-metrics {
   display: grid;
@@ -277,8 +231,7 @@ p {
   gap: 0.75rem;
 }
 
-.overview-grid article,
-.terrain-metrics article {
+.overview-grid article {
   min-width: 0;
   padding: 0.9rem;
   border: 1px solid var(--fg-border-default);
@@ -291,15 +244,13 @@ p {
   border-top: 3px solid var(--fg-brand-500);
 }
 
-.overview-grid article > span,
-.terrain-metrics span {
+.overview-grid article > span {
   display: block;
   color: var(--fg-neutral-500);
   font: var(--fg-type-label-sm);
 }
 
-.overview-grid article > strong,
-.terrain-metrics strong {
+.overview-grid article > strong {
   margin-top: 0.25rem;
   display: block;
   overflow-wrap: anywhere;
@@ -628,14 +579,6 @@ p {
 
 .terrain-metrics {
   margin-bottom: 0.8rem;
-}
-
-.terrain-metrics article {
-  box-shadow: none;
-}
-
-.terrain-metrics strong {
-  font: var(--fg-type-heading-md);
 }
 
 .method-panel {
