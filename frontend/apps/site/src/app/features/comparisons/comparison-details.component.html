@@ -1,0 +1,366 @@
+<main class="comparison-page">
+  <nav class="app-bar" aria-label="Primary navigation">
+    <a class="brand" routerLink="/projects">
+      <span class="brand__mark" aria-hidden="true">F</span>
+      <span>FormaGeo</span>
+    </a>
+    <span class="app-bar__context">Site comparison</span>
+  </nav>
+
+  @if (loading()) {
+    <fg-page-state
+      title="Opening comparison"
+      description="Loading the saved rankings, metrics, and site boundaries…"
+    />
+  } @else if (!comparison() || !project()) {
+    <fg-page-state
+      tone="error"
+      title="Unable to open comparison"
+      [description]="
+        errorMessage() ?? 'The saved comparison could not be loaded.'
+      "
+    >
+      <a class="button button--secondary" routerLink="/projects">
+        Back to projects
+      </a>
+    </fg-page-state>
+  } @else {
+    <div class="comparison-shell">
+      <div class="page-actions">
+        <a
+          class="back-link"
+          [routerLink]="['/projects', comparison()!.projectId]"
+        >
+          <svg lucideArrowLeft aria-hidden="true"></svg>
+          Back to {{ project()!.name }}
+        </a>
+        <button
+          class="button button--secondary"
+          type="button"
+          (click)="exportCsv()"
+        >
+          <svg lucideDownload aria-hidden="true"></svg>
+          Export CSV
+        </button>
+      </div>
+
+      <header class="comparison-header">
+        <div>
+          <p class="eyebrow">Saved decision snapshot</p>
+          <h1>Candidate site comparison</h1>
+          <p>
+            {{ comparison()!.scenarioName }} · model v{{
+              comparison()!.modelVersion
+            }}
+            · {{ comparison()!.comparisonDateUtc | date: 'medium' }}
+          </p>
+        </div>
+        <div class="header-stat">
+          <strong>{{ comparison()!.selectedSiteIds.length }}</strong>
+          <span>sites evaluated</span>
+        </div>
+      </header>
+
+      @if (errorMessage()) {
+        <fg-alert
+          class="page-message"
+          tone="error"
+          [message]="errorMessage()!"
+        />
+      }
+
+      <section class="score-summary" aria-labelledby="score-summary-title">
+        <header>
+          <div>
+            <p class="eyebrow">Score summary</p>
+            <h2 id="score-summary-title">Overall ranking</h2>
+          </div>
+          <span>Same scenario · same model version</span>
+        </header>
+        <div class="summary-grid">
+          @for (ranking of comparison()!.rankings; track ranking.siteId) {
+            <button
+              type="button"
+              [class.summary-card--active]="selectedSiteId() === ranking.siteId"
+              (click)="selectSite(ranking.siteId)"
+            >
+              <span class="rank-number">
+                @if (ranking.rank === 1) {
+                  <svg lucideTrophy aria-hidden="true"></svg>
+                }
+                #{{ ranking.rank }}
+              </span>
+              <strong>{{ ranking.siteName }}</strong>
+              <small>{{ ranking.rating }}</small>
+              <b [class]="scoreTone(ranking.overallScore)">
+                {{
+                  ranking.overallScore === null
+                    ? 'N/A'
+                    : (ranking.overallScore | number: '1.0-2')
+                }}
+              </b>
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="comparison-grid">
+        <article class="comparison-table-panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Metric breakdown</p>
+              <h2>Side-by-side evidence</h2>
+              <p>
+                Best and worst values follow each metric’s scoring direction.
+              </p>
+            </div>
+            <details class="metric-picker">
+              <summary>
+                <svg lucideSlidersHorizontal aria-hidden="true"></svg>
+                Metrics
+                <span>{{ displayedMetrics().length }}</span>
+              </summary>
+              <div>
+                @for (metric of comparison()!.metrics; track metric.key) {
+                  <label>
+                    <input
+                      type="checkbox"
+                      [checked]="selectedMetricKeys().has(metric.key)"
+                      [disabled]="
+                        selectedMetricKeys().size === 1 &&
+                        selectedMetricKeys().has(metric.key)
+                      "
+                      (change)="
+                        toggleMetric(metric.key, $any($event.target).checked)
+                      "
+                    />
+                    <span>
+                      <strong>{{ metric.name }}</strong>
+                      <small>{{ metric.dataSource }}</small>
+                    </span>
+                  </label>
+                }
+              </div>
+            </details>
+          </header>
+
+          <div class="table-scroll">
+            <table>
+              <caption class="visually-hidden">
+                Comparison of overall and metric values for selected sites
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Rank</th>
+                  <th scope="col">Candidate site</th>
+                  <th
+                    scope="col"
+                    [attr.aria-sort]="
+                      sortMetricKey() === 'overall' ? sortDirection() : 'none'
+                    "
+                  >
+                    <button
+                      type="button"
+                      [attr.aria-label]="
+                        'Overall score. ' + sortAriaLabel('overall')
+                      "
+                      (click)="sortBy('overall')"
+                    >
+                      Overall
+                      <svg lucideArrowUpDown aria-hidden="true"></svg>
+                    </button>
+                  </th>
+                  @for (metric of displayedMetrics(); track metric.key) {
+                    <th
+                      scope="col"
+                      [attr.aria-sort]="
+                        sortMetricKey() === metric.key
+                          ? sortDirection()
+                          : 'none'
+                      "
+                    >
+                      <button
+                        type="button"
+                        [attr.aria-label]="
+                          metric.name + '. ' + sortAriaLabel(metric.key)
+                        "
+                        (click)="sortBy(metric.key)"
+                      >
+                        <span>
+                          {{ metric.name }}
+                          <small>{{ metric.unit || 'Value' }}</small>
+                        </span>
+                        <svg lucideArrowUpDown aria-hidden="true"></svg>
+                      </button>
+                    </th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (ranking of sortedRankings(); track ranking.siteId) {
+                  <tr
+                    tabindex="0"
+                    [class.comparison-row--active]="
+                      selectedSiteId() === ranking.siteId
+                    "
+                    (click)="selectSite(ranking.siteId)"
+                    (keydown.enter)="selectSite(ranking.siteId)"
+                    (keydown.space)="selectSite(ranking.siteId)"
+                  >
+                    <td>
+                      <span class="table-rank">#{{ ranking.rank }}</span>
+                    </td>
+                    <th scope="row">
+                      <strong>{{ ranking.siteName }}</strong>
+                      <small>{{ ranking.rating }}</small>
+                    </th>
+                    <td
+                      class="metric-value"
+                      [class.value--best]="isBestScore(ranking)"
+                      [class.value--worst]="isWorstScore(ranking)"
+                    >
+                      <strong>
+                        {{
+                          ranking.overallScore === null
+                            ? 'N/A'
+                            : (ranking.overallScore | number: '1.0-2')
+                        }}
+                      </strong>
+                      @if (isBestScore(ranking)) {
+                        <span class="value-label value-label--best">Best</span>
+                      } @else if (isWorstScore(ranking)) {
+                        <span class="value-label value-label--worst"
+                          >Lowest</span
+                        >
+                      }
+                    </td>
+                    @for (metric of displayedMetrics(); track metric.key) {
+                      @let result = metricFor(ranking, metric.key);
+                      <td
+                        class="metric-value"
+                        [class.value--missing]="!result || result.isMissing"
+                        [class.value--best]="isBest(ranking, metric)"
+                        [class.value--worst]="isWorst(ranking, metric)"
+                      >
+                        <strong>
+                          {{
+                            formatValue(result?.rawValue ?? null, metric.unit)
+                          }}
+                        </strong>
+                        @if (isBest(ranking, metric)) {
+                          <span class="value-label value-label--best"
+                            >Best</span
+                          >
+                        } @else if (isWorst(ranking, metric)) {
+                          <span class="value-label value-label--worst"
+                            >Worst</span
+                          >
+                        } @else if (result && result.normalizedScore !== null) {
+                          <small>
+                            {{ result?.normalizedScore | number: '1.0-1' }}
+                            / 100
+                          </small>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <footer class="ranking-note">
+            <svg lucideCircleAlert aria-hidden="true"></svg>
+            <span>
+              <strong>How ranking works</strong>
+              {{ comparison()!.rankingExplanation }}
+            </span>
+          </footer>
+        </article>
+
+        <aside class="map-card" aria-labelledby="comparison-map-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Synchronized map</p>
+              <h2 id="comparison-map-title">Selected boundaries</h2>
+              <p>Choose a row or boundary to focus the same site.</p>
+            </div>
+            <svg lucideMap aria-hidden="true"></svg>
+          </header>
+          <div class="comparison-map">
+            <fg-map
+              [features]="mapFeatures()"
+              [interactionTools]="false"
+              [selectedFeatureId]="selectedSiteId()"
+              (featureSelected)="selectSite($event.featureId)"
+            />
+          </div>
+        </aside>
+      </section>
+
+      @if (selectedRanking(); as ranking) {
+        <section class="insights-panel" aria-labelledby="insights-title">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Selected candidate</p>
+              <h2 id="insights-title">{{ ranking.siteName }}</h2>
+              <p>Evidence-based strengths, weaknesses, and data gaps.</p>
+            </div>
+            <b [class]="scoreTone(ranking.overallScore)">
+              {{
+                ranking.overallScore === null
+                  ? 'Not scoreable'
+                  : (ranking.overallScore | number: '1.0-2')
+              }}
+            </b>
+          </header>
+          <div class="insight-grid">
+            <section>
+              <h3>Strengths</h3>
+              @for (strength of ranking.strengths; track strength) {
+                <p><svg lucideCheck aria-hidden="true"></svg>{{ strength }}</p>
+              } @empty {
+                <p>No metric reached the strength threshold.</p>
+              }
+            </section>
+            <section>
+              <h3>Weaknesses</h3>
+              @for (weakness of ranking.weaknesses; track weakness) {
+                <p>
+                  <svg lucideCircleAlert aria-hidden="true"></svg>{{ weakness }}
+                </p>
+              } @empty {
+                <p>No low-scoring metrics were identified.</p>
+              }
+            </section>
+            <section>
+              <h3>Missing information</h3>
+              @for (missing of ranking.missingInformation; track missing) {
+                <p>
+                  <svg lucideCircleAlert aria-hidden="true"></svg>{{ missing }}
+                </p>
+              } @empty {
+                <p>No missing information affected this result.</p>
+              }
+            </section>
+          </div>
+        </section>
+      }
+
+      <details class="data-versions">
+        <summary>Data versions used in this comparison</summary>
+        <div>
+          @for (
+            version of comparison()!.dataVersions;
+            track version.criterionKey
+          ) {
+            <p>
+              <strong>{{ version.dataSource }}</strong>
+              <span>{{ version.versions.join(', ') }}</span>
+            </p>
+          }
+        </div>
+      </details>
+    </div>
+  }
+</main>

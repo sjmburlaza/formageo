@@ -1,4 +1,5 @@
 using FormaGeo.Application.Analyses;
+using FormaGeo.Application.Comparisons;
 using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects;
 using FormaGeo.Application.Scoring;
@@ -62,6 +63,9 @@ public static class DependencyInjection
         services.AddScoped<
             IScoringValueProvider,
             AnalysisScoringValueProvider>();
+        services.AddScoped<
+            IComparisonRepository,
+            ComparisonRepository>();
 
         services.AddScoped<AnalysisRunProcessor>();
         services.AddScoped<DevelopmentMockDataSeeder>();

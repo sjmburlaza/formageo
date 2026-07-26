@@ -1,8 +1,10 @@
 <aside class="sites-panel">
   <div class="panel-heading">
     <div>
-      <p class="eyebrow">Project boundaries</p>
-      <h2>Sites</h2>
+      <p class="eyebrow">
+        {{ comparisonMode() ? 'Comparison selection' : 'Project boundaries' }}
+      </p>
+      <h2>{{ comparisonMode() ? 'Choose sites' : 'Sites' }}</h2>
     </div>
     <span class="count-badge">{{ sites().length }}</span>
   </div>
@@ -45,28 +47,62 @@
         <li
           class="site-list-item"
           [class.site-list-item--active]="selectedSiteId() === site.id"
+          [class.site-list-item--comparison-selected]="
+            comparisonSiteIds().has(site.id)
+          "
           [class.site-list-item--archived]="site.status === 'Archived'"
         >
-          <button
-            class="visibility-button"
-            type="button"
-            [class.visibility-button--hidden]="hiddenSiteIds().has(site.id)"
-            [attr.aria-label]="
-              (hiddenSiteIds().has(site.id) ? 'Show ' : 'Hide ') + site.name
-            "
-            (click)="visibilityToggled.emit(site)"
-          >
-            @if (hiddenSiteIds().has(site.id)) {
-              <svg lucideEyeOff aria-hidden="true"></svg>
-            } @else {
-              <svg lucideEye aria-hidden="true"></svg>
-            }
-          </button>
+          @if (comparisonMode()) {
+            <button
+              class="comparison-check"
+              type="button"
+              [class.comparison-check--selected]="
+                comparisonSiteIds().has(site.id)
+              "
+              [disabled]="
+                !comparisonSiteIds().has(site.id) &&
+                comparisonSiteIds().size >= comparisonLimit()
+              "
+              [attr.aria-label]="
+                (comparisonSiteIds().has(site.id) ? 'Remove ' : 'Add ') +
+                site.name +
+                (comparisonSiteIds().has(site.id)
+                  ? ' from comparison'
+                  : ' to comparison')
+              "
+              [attr.aria-pressed]="comparisonSiteIds().has(site.id)"
+              (click)="comparisonToggled.emit(site)"
+            >
+              @if (comparisonSiteIds().has(site.id)) {
+                <svg lucideCheck aria-hidden="true"></svg>
+              }
+            </button>
+          } @else {
+            <button
+              class="visibility-button"
+              type="button"
+              [class.visibility-button--hidden]="hiddenSiteIds().has(site.id)"
+              [attr.aria-label]="
+                (hiddenSiteIds().has(site.id) ? 'Show ' : 'Hide ') + site.name
+              "
+              (click)="visibilityToggled.emit(site)"
+            >
+              @if (hiddenSiteIds().has(site.id)) {
+                <svg lucideEyeOff aria-hidden="true"></svg>
+              } @else {
+                <svg lucideEye aria-hidden="true"></svg>
+              }
+            </button>
+          }
 
           <button
             class="site-select-button"
             type="button"
-            [attr.aria-pressed]="selectedSiteId() === site.id"
+            [attr.aria-pressed]="
+              comparisonMode()
+                ? comparisonSiteIds().has(site.id)
+                : selectedSiteId() === site.id
+            "
             (click)="siteSelected.emit(site)"
           >
             <span class="site-swatch" aria-hidden="true">
@@ -79,7 +115,9 @@
                 {{ site.boundary.coordinates.length === 1 ? 'ring' : 'rings' }}
               </small>
             </span>
-            @if (selectedSiteId() === site.id) {
+            @if (comparisonMode() && comparisonSiteIds().has(site.id)) {
+              <span class="selected-indicator">Added</span>
+            } @else if (selectedSiteId() === site.id) {
               <span class="selected-indicator">Selected</span>
             }
           </button>
@@ -89,8 +127,14 @@
   }
 
   <footer class="panel-footer">
-    <span class="legend-swatch"></span>
-    <span>Site boundary</span>
-    <strong>EPSG:4326</strong>
+    @if (comparisonMode()) {
+      <span class="legend-swatch legend-swatch--comparison"></span>
+      <span>Comparison candidate</span>
+      <strong> {{ comparisonSiteIds().size }}/{{ comparisonLimit() }} </strong>
+    } @else {
+      <span class="legend-swatch"></span>
+      <span>Site boundary</span>
+      <strong>EPSG:4326</strong>
+    }
   </footer>
 </aside>
