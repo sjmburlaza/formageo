@@ -34,14 +34,23 @@
           <svg lucideArrowLeft aria-hidden="true"></svg>
           Back to {{ project()!.name }}
         </a>
-        <button
-          class="button button--secondary"
-          type="button"
-          (click)="exportCsv()"
-        >
-          <svg lucideDownload aria-hidden="true"></svg>
-          Export CSV
-        </button>
+        <div class="page-actions__buttons">
+          <button
+            class="button button--secondary"
+            type="button"
+            (click)="exportCsv()"
+          >
+            <svg lucideDownload aria-hidden="true"></svg>
+            Quick CSV
+          </button>
+          <a
+            class="button button--primary"
+            [routerLink]="['/comparisons', comparison()!.id, 'reports']"
+          >
+            <svg lucideFileText aria-hidden="true"></svg>
+            Build report
+          </a>
+        </div>
       </div>
 
       <header class="comparison-header">

@@ -2,6 +2,7 @@ using FormaGeo.Domain.Analyses;
 using FormaGeo.Domain.Comparisons;
 using FormaGeo.Domain.Layers;
 using FormaGeo.Domain.Projects;
+using FormaGeo.Domain.Reports;
 using FormaGeo.Domain.Scoring;
 using FormaGeo.Domain.Sites;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,9 @@ public sealed class FormaGeoDbContext : DbContext
 
     public DbSet<SiteComparison> SiteComparisons =>
         Set<SiteComparison>();
+
+    public DbSet<GeneratedReport> GeneratedReports =>
+        Set<GeneratedReport>();
 
     public DbSet<DataSource> DataSources => Set<DataSource>();
 

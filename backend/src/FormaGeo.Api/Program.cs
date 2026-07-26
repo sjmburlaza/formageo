@@ -5,6 +5,7 @@ using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects.CreateProject;
 using FormaGeo.Application.Projects.GetProject;
 using FormaGeo.Application.Projects.GetProjects;
+using FormaGeo.Application.Reports;
 using FormaGeo.Application.SiteImports;
 using FormaGeo.Application.Scoring;
 using FormaGeo.Application.Sites.ArchiveSite;
@@ -96,6 +97,7 @@ builder.Services.AddScoped<SiteImportService>();
 builder.Services.AddScoped<AnalysisRunService>();
 builder.Services.AddScoped<ScoringService>();
 builder.Services.AddScoped<ComparisonService>();
+builder.Services.AddScoped<ReportService>();
 builder.Services.AddHostedService<AnalysisWorker>();
 
 builder.Services.AddCors(options =>

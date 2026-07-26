@@ -46,6 +46,13 @@
         </div>
         <div class="site-header__actions">
           <a
+            class="button button--secondary"
+            [routerLink]="['/sites', site()!.id, 'reports']"
+          >
+            <svg lucideFileText aria-hidden="true"></svg>
+            Build report
+          </a>
+          <a
             class="button button--primary"
             [routerLink]="['/sites', site()!.id, 'scoring']"
           >

@@ -5,5 +5,6 @@ export * from './lib/api-error';
 export * from './lib/comparisons-api.service';
 export * from './lib/layers-api.service';
 export * from './lib/projects-api.service';
+export * from './lib/reports-api.service';
 export * from './lib/scoring-api.service';
 export * from './lib/sites-api.service';
