@@ -32,6 +32,11 @@
   gap: var(--fg-space-3);
 }
 
+.page-actions__buttons {
+  display: flex;
+  gap: var(--fg-space-2);
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;

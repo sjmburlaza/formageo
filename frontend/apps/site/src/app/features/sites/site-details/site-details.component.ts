@@ -25,6 +25,7 @@ import {
 import {
   LucideArrowLeft,
   LucideChartNoAxesCombined,
+  LucideFileText,
   LucideTrash2,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
@@ -39,6 +40,7 @@ import { SiteBoundaryRecordComponent } from './site-boundary-record/site-boundar
     CommonModule,
     LucideArrowLeft,
     LucideChartNoAxesCombined,
+    LucideFileText,
     LucideTrash2,
     MapComponent,
     PageStateComponent,

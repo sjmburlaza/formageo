@@ -1,0 +1,691 @@
+<main class="report-page">
+  <nav class="app-bar" aria-label="Primary navigation">
+    <a class="brand" routerLink="/projects">
+      <span class="brand__mark" aria-hidden="true">F</span>
+      <span>FormaGeo</span>
+    </a>
+    <span class="app-bar__context">Reports & exports</span>
+  </nav>
+
+  @if (loading()) {
+    <fg-page-state
+      title="Preparing report builder"
+      description="Assembling the saved site evidence, measurements, and citations…"
+    />
+  } @else if (!preview()) {
+    <fg-page-state
+      tone="error"
+      title="Unable to prepare report"
+      [description]="errorMessage() ?? 'The report source could not be loaded.'"
+    >
+      <a class="button button--secondary" routerLink="/projects">
+        Back to projects
+      </a>
+    </fg-page-state>
+  } @else {
+    <div class="report-shell">
+      <header class="builder-header">
+        <div>
+          <a
+            class="back-link"
+            [routerLink]="
+              sourceType === 'site'
+                ? ['/sites', sourceId]
+                : ['/comparisons', sourceId]
+            "
+          >
+            <svg lucideArrowLeft aria-hidden="true"></svg>
+            Back to {{ sourceType === 'site' ? 'site' : 'comparison' }}
+          </a>
+          <p class="eyebrow">Report builder</p>
+          <h1>{{ preview()!.sourceName }}</h1>
+          <p>
+            {{ preview()!.projectName }} ·
+            {{ preview()!.dataSources.length }} attributed sources ·
+            {{ preview()!.findings.length }} analysis findings
+          </p>
+        </div>
+        <div class="builder-header__actions">
+          <button
+            class="button button--secondary"
+            type="button"
+            [disabled]="previewLoading()"
+            (click)="refreshPreview()"
+          >
+            <svg lucideEye aria-hidden="true"></svg>
+            {{ previewLoading() ? 'Refreshing…' : 'Preview report' }}
+          </button>
+          <button
+            class="button button--primary"
+            type="button"
+            [disabled]="generating() || reportForm.invalid"
+            (click)="generatePdf()"
+          >
+            <svg lucideFileText aria-hidden="true"></svg>
+            {{ generating() ? 'Generating PDF…' : 'Generate PDF' }}
+          </button>
+        </div>
+      </header>
+
+      @if (errorMessage()) {
+        <fg-alert class="builder-alert" tone="error" [message]="errorMessage()!" />
+      }
+
+      @if (generatedReport(); as report) {
+        <section class="success-banner" aria-live="polite">
+          <span class="success-banner__icon">
+            <svg lucideCheck aria-hidden="true"></svg>
+          </span>
+          <div>
+            <strong>Your report is ready</strong>
+            <span
+              >{{ report.fileName }} ·
+              {{ formatBytes(report.fileSizeBytes) }}</span
+            >
+          </div>
+          <button
+            class="button button--secondary"
+            type="button"
+            [disabled]="downloadingId() === report.id"
+            (click)="download(report)"
+          >
+            <svg lucideDownload aria-hidden="true"></svg>
+            {{ downloadingId() === report.id ? 'Downloading…' : 'Download' }}
+          </button>
+        </section>
+      }
+
+      <div class="builder-grid">
+        <aside class="configuration-panel" aria-label="Report configuration">
+          <form [formGroup]="reportForm">
+            <section class="config-section">
+              <header>
+                <span class="config-icon">
+                  <svg lucideFileText aria-hidden="true"></svg>
+                </span>
+                <div>
+                  <h2>Report details</h2>
+                  <p>Name this point-in-time decision record.</p>
+                </div>
+              </header>
+              <label>
+                <span>Report title</span>
+                <input
+                  type="text"
+                  formControlName="title"
+                  maxlength="200"
+                  (input)="markPreviewDirty()"
+                />
+              </label>
+              @if (
+                reportForm.controls.title.touched &&
+                reportForm.controls.title.invalid
+              ) {
+                <small class="field-error">A report title is required.</small>
+              }
+            </section>
+
+            <section class="config-section">
+              <header>
+                <span class="config-icon">
+                  <svg lucidePalette aria-hidden="true"></svg>
+                </span>
+                <div>
+                  <h2>Branding</h2>
+                  <p>Apply consistent authorship and document color.</p>
+                </div>
+              </header>
+              <div class="field-grid">
+                <label>
+                  <span>Organization</span>
+                  <input
+                    type="text"
+                    formControlName="organizationName"
+                    maxlength="120"
+                    (input)="markPreviewDirty()"
+                  />
+                </label>
+                <label>
+                  <span>Prepared by</span>
+                  <input
+                    type="text"
+                    formControlName="preparedBy"
+                    maxlength="120"
+                    (input)="markPreviewDirty()"
+                  />
+                </label>
+              </div>
+              <div class="brand-color-field">
+                <label>
+                  <span>Accent color</span>
+                  <div>
+                    <input
+                      aria-label="Choose report accent color"
+                      type="color"
+                      formControlName="accentColor"
+                      (input)="markPreviewDirty()"
+                    />
+                    <input
+                      aria-label="Report accent color hex value"
+                      type="text"
+                      formControlName="accentColor"
+                      maxlength="7"
+                      (input)="markPreviewDirty()"
+                    />
+                  </div>
+                </label>
+              </div>
+              <label>
+                <span>Footer text</span>
+                <input
+                  type="text"
+                  formControlName="footerText"
+                  maxlength="180"
+                  (input)="markPreviewDirty()"
+                />
+              </label>
+            </section>
+
+            <section class="config-section sections-config">
+              <header>
+                <span class="config-icon">
+                  <svg lucideDatabase aria-hidden="true"></svg>
+                </span>
+                <div>
+                  <h2>Sections</h2>
+                  <p>{{ includedCount() }} of {{ sections().length }} included</p>
+                </div>
+              </header>
+              <ol>
+                @for (
+                  section of sections();
+                  track section.key;
+                  let first = $first;
+                  let last = $last
+                ) {
+                  <li [class.section-option--excluded]="!section.included">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="section.included"
+                        [disabled]="section.included && includedCount() === 1"
+                        (change)="
+                          toggleSection(
+                            section.key,
+                            $any($event.target).checked
+                          )
+                        "
+                      />
+                      <span>
+                        <strong>{{ section.label }}</strong>
+                        <small>{{ section.description }}</small>
+                      </span>
+                    </label>
+                    <div class="order-actions" aria-label="Section ordering">
+                      <button
+                        type="button"
+                        aria-label="Move section up"
+                        [disabled]="first"
+                        (click)="moveSection(section.key, -1)"
+                      >
+                        <svg lucideArrowUp aria-hidden="true"></svg>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Move section down"
+                        [disabled]="last"
+                        (click)="moveSection(section.key, 1)"
+                      >
+                        <svg lucideArrowDown aria-hidden="true"></svg>
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ol>
+            </section>
+          </form>
+
+          <section class="data-exports" aria-labelledby="exports-title">
+            <header>
+              <span class="config-icon">
+                <svg lucideDatabase aria-hidden="true"></svg>
+              </span>
+              <div>
+                <h2 id="exports-title">Data exports</h2>
+                <p>Generate reusable, attributed source data.</p>
+              </div>
+            </header>
+            @for (option of exportOptions(); track option.format) {
+              <button
+                type="button"
+                [disabled]="exportingFormat() !== null"
+                (click)="generateExport(option.format)"
+              >
+                <span>
+                  <strong>{{ option.label }}</strong>
+                  <small>{{ option.description }}</small>
+                </span>
+                <svg lucideDownload aria-hidden="true"></svg>
+              </button>
+            }
+          </section>
+        </aside>
+
+        <section class="preview-panel" aria-labelledby="preview-title">
+          <header class="preview-toolbar">
+            <div>
+              <p class="eyebrow">Live document</p>
+              <h2 id="preview-title">Report preview</h2>
+            </div>
+            <span
+              class="preview-status"
+              [class.preview-status--dirty]="previewDirty()"
+            >
+              <i></i>
+              {{ previewDirty() ? 'Changes not previewed' : 'Preview current' }}
+            </span>
+          </header>
+
+          <div class="paper-stack">
+            @for (section of visiblePreviewSections(); track section.key) {
+              @switch (section.key) {
+                @case ('Cover') {
+                  <article
+                    class="report-sheet cover-sheet"
+                    [style.border-top-color]="
+                      reportForm.controls.accentColor.value
+                    "
+                  >
+                    <div
+                      class="cover-sheet__stripe"
+                      [style.background]="reportForm.controls.accentColor.value"
+                    ></div>
+                    <p class="cover-brand">
+                      {{ reportForm.controls.organizationName.value }}
+                    </p>
+                    <h2>{{ reportForm.controls.title.value }}</h2>
+                    <p class="cover-type">
+                      {{
+                        sourceType === 'site'
+                          ? 'Site feasibility report'
+                          : 'Site comparison feasibility report'
+                      }}
+                    </p>
+                    <dl>
+                      <div>
+                        <dt>Project</dt>
+                        <dd>{{ preview()!.projectName }}</dd>
+                      </div>
+                      <div>
+                        <dt>Report source</dt>
+                        <dd>{{ preview()!.sourceName }}</dd>
+                      </div>
+                      <div>
+                        <dt>Prepared by</dt>
+                        <dd>{{ reportForm.controls.preparedBy.value }}</dd>
+                      </div>
+                      <div>
+                        <dt>Generated</dt>
+                        <dd>
+                          {{ preview()!.generationDateUtc | date: 'longDate' }}
+                        </dd>
+                      </div>
+                    </dl>
+                    <footer>
+                      Measurements, findings, scores, and citations are frozen
+                      at generation.
+                    </footer>
+                  </article>
+                }
+                @case ('ExecutiveSummary') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Decision snapshot</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    <div class="preview-metrics">
+                      <div>
+                        <strong>{{ preview()!.mapSites.length }}</strong>
+                        <span>Sites reviewed</span>
+                      </div>
+                      <div>
+                        <strong>{{ preview()!.findings.length }}</strong>
+                        <span>Analysis findings</span>
+                      </div>
+                      <div>
+                        <strong>{{ preview()!.dataSources.length }}</strong>
+                        <span>Cited sources</span>
+                      </div>
+                    </div>
+                    <section class="preview-copy">
+                      <h3>Assessment overview</h3>
+                      <p>
+                        This feasibility report consolidates saved geometry,
+                        spatial evidence, suitability outputs, and source
+                        attribution for {{ preview()!.sourceName }}.
+                      </p>
+                    </section>
+                  </article>
+                }
+                @case ('SiteLocation') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Spatial context</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    <div class="preview-map">
+                      <fg-map
+                        [features]="mapFeatures()"
+                        [interactionTools]="false"
+                        [selectedFeatureId]="null"
+                      />
+                    </div>
+                    <p class="map-note">
+                      <svg lucideMap aria-hidden="true"></svg>
+                      WGS 84 boundary framing · Orientation use only
+                    </p>
+                  </article>
+                }
+                @case ('GeometrySummary') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Measured boundary</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    <div class="measurement-list">
+                      @for (
+                        measurement of preview()!.measurements;
+                        track measurement.siteId
+                      ) {
+                        <section>
+                          <h3>{{ measurement.siteName }}</h3>
+                          <dl>
+                            <div>
+                              <dt>Area</dt>
+                              <dd>
+                                {{
+                                  measurement.areaHectares === null
+                                    ? 'Unavailable'
+                                    : (measurement.areaHectares
+                                      | number: '1.2-2') + ' ha'
+                                }}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Perimeter</dt>
+                              <dd>
+                                {{
+                                  measurement.perimeterMetres === null
+                                    ? 'Unavailable'
+                                    : (measurement.perimeterMetres
+                                      | number: '1.0-0') + ' m'
+                                }}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Vertices</dt>
+                              <dd>{{ measurement.vertexCount | number }}</dd>
+                            </div>
+                            <div>
+                              <dt>CRS</dt>
+                              <dd>{{ measurement.coordinateSystem }}</dd>
+                            </div>
+                          </dl>
+                        </section>
+                      }
+                    </div>
+                  </article>
+                }
+                @case ('HazardFindings') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Spatial evidence</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    <div class="finding-list">
+                      @for (
+                        finding of findings('Hazards');
+                        track finding.siteId + finding.name
+                      ) {
+                        <section [class]="severityClass(finding.severity)">
+                          <div>
+                            <h3>{{ finding.name }}</h3>
+                            <span>{{ finding.severity }}</span>
+                          </div>
+                          <strong>{{ finding.classification }}</strong>
+                          <p>{{ finding.summary }}</p>
+                        </section>
+                      } @empty {
+                        <p class="preview-empty">
+                          No completed hazard findings were available.
+                        </p>
+                      }
+                    </div>
+                  </article>
+                }
+                @case ('PlanningFindings') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Land-use context</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    <div class="finding-list">
+                      @for (
+                        finding of findings('Planning');
+                        track finding.siteId + finding.name
+                      ) {
+                        <section [class]="severityClass(finding.severity)">
+                          <div>
+                            <h3>{{ finding.name }}</h3>
+                            <span>{{ finding.severity }}</span>
+                          </div>
+                          <strong>{{ finding.classification }}</strong>
+                          <p>{{ finding.summary }}</p>
+                        </section>
+                      } @empty {
+                        <p class="preview-empty">
+                          No completed planning findings were available.
+                        </p>
+                      }
+                    </div>
+                  </article>
+                }
+                @case ('SuitabilityScore') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Weighted decision model</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    @if (preview()!.suitabilityScore; as score) {
+                      <div class="score-preview">
+                        <div>
+                          <strong>{{
+                            score.overallScore === null
+                              ? 'N/A'
+                              : (score.overallScore | number: '1.0-1')
+                          }}</strong>
+                          <span>{{ score.rating }}</span>
+                        </div>
+                        <p>
+                          {{ score.modelName }} · model v{{ score.modelVersion }}
+                          <small>{{ score.metrics.length }} criteria</small>
+                        </p>
+                      </div>
+                      <div class="metric-rows">
+                        @for (
+                          metric of score.metrics.slice(0, 6);
+                          track metric.name
+                        ) {
+                          <div>
+                            <span>{{ metric.name }}</span>
+                            <strong>
+                              {{
+                                metric.rawValue === null
+                                  ? 'No data'
+                                  : (metric.rawValue | number: '1.0-2') +
+                                    ' ' +
+                                    metric.unit
+                              }}
+                            </strong>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <p class="preview-empty">
+                        No saved suitability result was available.
+                      </p>
+                    }
+                  </article>
+                }
+                @case ('SiteComparison') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Ranked candidates</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    @if (preview()!.comparison; as comparison) {
+                      <div class="comparison-preview">
+                        <div class="comparison-preview__header">
+                          <span>Rank</span>
+                          <span>Candidate site</span>
+                          <span>Score</span>
+                          <span>Rating</span>
+                        </div>
+                        @for (site of comparison.sites; track site.siteId) {
+                          <div>
+                            <strong>#{{ site.rank }}</strong>
+                            <span>{{ site.siteName }}</span>
+                            <b>{{
+                              site.overallScore === null
+                                ? 'N/A'
+                                : (site.overallScore | number: '1.0-1')
+                            }}</b>
+                            <small>{{ site.rating }}</small>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <p class="preview-empty">
+                        No comparison snapshot is attached.
+                      </p>
+                    }
+                  </article>
+                }
+                @case ('DataSources') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Attribution register</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    <div class="source-list">
+                      @for (
+                        source of preview()!.dataSources.slice(0, 8);
+                        track source.dataset + source.version
+                      ) {
+                        <section>
+                          <h3>{{ source.dataset }}</h3>
+                          <p>
+                            {{ source.organization }}
+                            @if (source.version) {
+                              · Version {{ source.version }}
+                            }
+                            @if (source.license) {
+                              · {{ source.license }}
+                            }
+                          </p>
+                        </section>
+                      } @empty {
+                        <p class="preview-empty">
+                          No source metadata was available.
+                        </p>
+                      }
+                    </div>
+                  </article>
+                }
+                @case ('Disclaimer') {
+                  <article class="report-sheet">
+                    <header class="sheet-heading">
+                      <p>Decision use</p>
+                      <h2>{{ section.heading }}</h2>
+                      <span>{{ section.summary }}</span>
+                    </header>
+                    <ol class="limitation-list">
+                      @for (
+                        limitation of preview()!.limitations;
+                        track limitation
+                      ) {
+                        <li>{{ limitation }}</li>
+                      }
+                    </ol>
+                  </article>
+                }
+              }
+            }
+          </div>
+        </section>
+      </div>
+
+      <section class="history-panel" aria-labelledby="history-title">
+        <header>
+          <div>
+            <p class="eyebrow">Stored outside the database</p>
+            <h2 id="history-title">Report history</h2>
+            <span
+              >Previously generated files remain available as immutable
+              snapshots.</span
+            >
+          </div>
+          <span class="history-count">{{ reports().length }} files</span>
+        </header>
+
+        @if (reports().length > 0) {
+          <div class="history-table">
+            <div class="history-row history-row--head">
+              <span>Report</span>
+              <span>Format</span>
+              <span>Generated</span>
+              <span>Size</span>
+              <span></span>
+            </div>
+            @for (report of reports(); track report.id) {
+              <div class="history-row">
+                <span>
+                  <i><svg lucideFileText aria-hidden="true"></svg></i>
+                  <b>
+                    <strong>{{ report.title }}</strong>
+                    <small>{{ report.fileName }}</small>
+                  </b>
+                </span>
+                <span>{{ formatLabel(report.format) }}</span>
+                <span>{{ report.generatedAtUtc | date: 'medium' }}</span>
+                <span>{{ formatBytes(report.fileSizeBytes) }}</span>
+                <button
+                  type="button"
+                  [disabled]="downloadingId() !== null"
+                  (click)="download(report)"
+                >
+                  <svg lucideDownload aria-hidden="true"></svg>
+                  {{ downloadingId() === report.id ? 'Loading…' : 'Download' }}
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="history-empty">
+            <svg lucideClock3 aria-hidden="true"></svg>
+            <strong>No generated files yet</strong>
+            <span>Preview the report, then generate a PDF or data export.</span>
+          </div>
+        }
+      </section>
+    </div>
+  }
+</main>

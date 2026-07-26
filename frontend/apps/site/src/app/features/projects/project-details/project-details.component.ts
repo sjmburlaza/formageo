@@ -23,6 +23,7 @@ import {
   getApiErrorMessage,
   LayersApiService,
   ProjectsApiService,
+  ReportsApiService,
   ScoringApiService,
   SitesApiService,
 } from '@frontend/api-client';
@@ -57,7 +58,7 @@ import {
   LucideArrowRight,
   LucideCircleCheck,
   LucideColumns3,
-  LucideFileText,
+  LucideDownload,
   LucidePenTool,
   LucideUpload,
   LucideX,
@@ -84,7 +85,7 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
     LucideArrowRight,
     LucideCircleCheck,
     LucideColumns3,
-    LucideFileText,
+    LucideDownload,
     LucidePenTool,
     LucideUpload,
     LucideX,
@@ -114,6 +115,7 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly layersApi = inject(LayersApiService);
   private readonly scoringApi = inject(ScoringApiService);
   private readonly comparisonsApi = inject(ComparisonsApiService);
+  private readonly reportsApi = inject(ReportsApiService);
   private summaryRequestSequence = 0;
   private layerPreferencesSaveTimer?: ReturnType<typeof setTimeout>;
 
@@ -166,6 +168,7 @@ export class ProjectDetailsComponent implements OnInit {
     new Set(),
   );
   protected readonly comparisonSaving = signal(false);
+  protected readonly projectExporting = signal(false);
   protected readonly comparisonSites = computed(() => {
     const selectedIds = this.comparisonSiteIds();
     return this.sites().filter((site) => selectedIds.has(site.id));
@@ -918,6 +921,59 @@ export class ProjectDetailsComponent implements OnInit {
         );
       },
     });
+  }
+
+  protected exportProjectArchive(): void {
+    const project = this.project();
+    if (!project || this.projectExporting()) {
+      return;
+    }
+
+    this.projectExporting.set(true);
+    this.apiErrorState.set(null);
+    this.reportsApi
+      .createProjectArchive(project.id, {
+        title: `${project.name} project data archive`,
+        format: 'ProjectArchive',
+        sections: [],
+        branding: {
+          organizationName: 'FormaGeo',
+          preparedBy: 'FormaGeo analysis team',
+          accentColor: '#0F766E',
+          footerText: 'Prepared with FormaGeo spatial decision support',
+        },
+      })
+      .pipe(finalize(() => this.projectExporting.set(false)))
+      .subscribe({
+        next: (report) => {
+          this.reportsApi.downloadReport(report.id).subscribe({
+            next: (blob) => {
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = report.fileName;
+              link.click();
+              URL.revokeObjectURL(url);
+            },
+            error: (error: unknown) => {
+              this.apiErrorState.set(
+                getApiErrorMessage(
+                  error,
+                  'The project archive could not be downloaded.',
+                ),
+              );
+            },
+          });
+        },
+        error: (error: unknown) => {
+          this.apiErrorState.set(
+            getApiErrorMessage(
+              error,
+              'The project archive could not be generated.',
+            ),
+          );
+        },
+      });
   }
 
   protected isSaving(siteId: string, action?: SavingAction): boolean {

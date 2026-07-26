@@ -2,6 +2,7 @@ using FormaGeo.Application.Analyses;
 using FormaGeo.Application.Comparisons;
 using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects;
+using FormaGeo.Application.Reports;
 using FormaGeo.Application.Scoring;
 using FormaGeo.Application.Sites;
 using FormaGeo.Application.Sites.Summaries;
@@ -10,9 +11,11 @@ using FormaGeo.Infrastructure.Persistence;
 using FormaGeo.Infrastructure.Persistence.Queries;
 using FormaGeo.Infrastructure.Persistence.Repositories;
 using FormaGeo.Infrastructure.Persistence.Seeding;
+using FormaGeo.Infrastructure.Reports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace FormaGeo.Infrastructure;
 
@@ -66,6 +69,27 @@ public static class DependencyInjection
         services.AddScoped<
             IComparisonRepository,
             ComparisonRepository>();
+        services.AddScoped<
+            IReportRepository,
+            ReportRepository>();
+        services.AddScoped<
+            IReportEvidenceReader,
+            ReportEvidenceReader>();
+        services.AddSingleton<
+            IReportFileGenerator,
+            ReportFileGenerator>();
+        services.AddSingleton<IOptions<ReportStorageOptions>>(
+            Options.Create(
+                new ReportStorageOptions
+                {
+                    RootPath =
+                        configuration[
+                            $"{ReportStorageOptions.SectionName}:RootPath"]
+                        ?? "App_Data/reports"
+                }));
+        services.AddSingleton<
+            IReportFileStore,
+            LocalReportFileStore>();
 
         services.AddScoped<AnalysisRunProcessor>();
         services.AddScoped<DevelopmentMockDataSeeder>();

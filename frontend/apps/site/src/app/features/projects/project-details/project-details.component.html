@@ -80,9 +80,14 @@
             </select>
           </label>
         }
-        <button class="toolbar-button" type="button" disabled>
-          <svg lucideFileText aria-hidden="true"></svg>
-          Generate report
+        <button
+          class="toolbar-button"
+          type="button"
+          [disabled]="projectExporting()"
+          (click)="exportProjectArchive()"
+        >
+          <svg lucideDownload aria-hidden="true"></svg>
+          {{ projectExporting() ? 'Preparing archive…' : 'Export project' }}
         </button>
       </nav>
     </header>

@@ -24,11 +24,27 @@ export const appRoutes: Routes = [
       ),
   },
   {
+    path: 'sites/:siteId/reports',
+    loadComponent: () =>
+      import('./features/reports/report-builder.component').then(
+        (module) => module.ReportBuilderComponent,
+      ),
+    data: { sourceType: 'site' },
+  },
+  {
     path: 'sites/:siteId',
     loadComponent: () =>
       import('./features/sites/site-details/site-details.component').then(
         (module) => module.SiteDetailsComponent,
       ),
+  },
+  {
+    path: 'comparisons/:comparisonId/reports',
+    loadComponent: () =>
+      import('./features/reports/report-builder.component').then(
+        (module) => module.ReportBuilderComponent,
+      ),
+    data: { sourceType: 'comparison' },
   },
   {
     path: 'comparisons/:comparisonId',
