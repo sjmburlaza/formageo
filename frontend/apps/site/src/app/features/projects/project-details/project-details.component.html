@@ -38,6 +38,7 @@
         <button
           class="toolbar-button toolbar-button--primary"
           type="button"
+          [disabled]="comparisonMode()"
           (click)="startDrawing()"
         >
           <svg lucidePenTool aria-hidden="true"></svg>
@@ -46,15 +47,39 @@
         <button
           class="toolbar-button"
           type="button"
+          [disabled]="comparisonMode()"
           (click)="openImportWizard()"
         >
           <svg lucideUpload aria-hidden="true"></svg>
           Import boundary
         </button>
-        <button class="toolbar-button" type="button" disabled>
+        <button
+          class="toolbar-button"
+          [class.toolbar-button--active]="comparisonMode()"
+          type="button"
+          [disabled]="sites().length < 2 || comparisonSaving()"
+          (click)="startComparisonMode()"
+        >
           <svg lucideColumns3 aria-hidden="true"></svg>
-          Compare sites
+          {{ comparisonMode() ? 'Cancel compare' : 'Compare sites' }}
         </button>
+        @if (savedComparisons().length > 0 && !comparisonMode()) {
+          <label class="saved-comparison-select">
+            <span class="visually-hidden">Open a saved comparison</span>
+            <select
+              aria-label="Open a saved comparison"
+              (change)="openSavedComparison($any($event.target).value)"
+            >
+              <option value="">Saved ({{ savedComparisons().length }})</option>
+              @for (comparison of savedComparisons(); track comparison.id) {
+                <option [value]="comparison.id">
+                  {{ comparison.scenarioName }} ·
+                  {{ comparison.comparisonDateUtc | date: 'shortDate' }}
+                </option>
+              }
+            </select>
+          </label>
+        }
         <button class="toolbar-button" type="button" disabled>
           <svg lucideFileText aria-hidden="true"></svg>
           Generate report
@@ -77,9 +102,13 @@
         [sites]="sites()"
         [selectedSiteId]="selectedSite()?.id ?? null"
         [hiddenSiteIds]="hiddenSiteIds()"
+        [comparisonMode]="comparisonMode()"
+        [comparisonSiteIds]="comparisonSiteIds()"
+        [comparisonLimit]="5"
         (drawRequested)="startDrawing()"
         (siteSelected)="selectSite($event)"
         (visibilityToggled)="toggleSiteVisibility($event)"
+        (comparisonToggled)="toggleComparisonSite($event)"
       />
 
       <section class="map-panel" aria-label="Site boundary map">
@@ -405,13 +434,127 @@
         } @else {
           <fg-empty-state
             icon="map"
-            title="No site selected"
-            description="Select a site from the list or click its boundary on the map."
+            [title]="
+              comparisonMode()
+                ? 'Comparison selection active'
+                : 'No site selected'
+            "
+            [description]="
+              comparisonMode()
+                ? 'Select two to five sites from the list or directly on the map.'
+                : 'Select a site from the list or click its boundary on the map.'
+            "
             [headingLevel]="2"
           />
         }
       </aside>
     </section>
+
+    @if (comparisonMode()) {
+      <section
+        class="comparison-tray"
+        aria-label="Selected sites for comparison"
+      >
+        <div class="comparison-tray__selection">
+          <header>
+            <div>
+              <p class="eyebrow">Comparison tray</p>
+              <h2>Selected sites</h2>
+            </div>
+            <span class="comparison-count">
+              {{ comparisonSiteIds().size }} / 5
+            </span>
+          </header>
+          <div class="comparison-chips">
+            @for (site of comparisonSites(); track site.id) {
+              <span>
+                {{ site.name }}
+                <button
+                  type="button"
+                  [attr.aria-label]="'Remove ' + site.name + ' from comparison'"
+                  (click)="removeComparisonSite(site.id)"
+                >
+                  <svg lucideX aria-hidden="true"></svg>
+                </button>
+              </span>
+            } @empty {
+              <small>Click site boundaries to add candidates.</small>
+            }
+          </div>
+        </div>
+
+        <div class="comparison-tray__controls">
+          <label class="tray-field">
+            <span>Scoring scenario</span>
+            <select
+              [value]="comparisonScenarioId() ?? ''"
+              [disabled]="scoringScenarios().length === 0"
+              (change)="selectComparisonScenario($any($event.target).value)"
+            >
+              @if (scoringScenarios().length === 0) {
+                <option value="">No saved scenarios</option>
+              }
+              @for (scenario of scoringScenarios(); track scenario.id) {
+                <option [value]="scenario.id">
+                  {{ scenario.name }} · v{{ scenario.latestModel.version }}
+                </option>
+              }
+            </select>
+          </label>
+
+          <details class="tray-metrics">
+            <summary>
+              <span>Metrics</span>
+              <strong>
+                {{ comparisonMetricKeys().size }}
+                selected
+              </strong>
+            </summary>
+            <div>
+              @for (
+                criterion of comparisonScenario()?.latestModel?.criteria ?? [];
+                track criterion.key
+              ) {
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="comparisonMetricKeys().has(criterion.key)"
+                    (change)="
+                      toggleComparisonMetric(
+                        criterion.key,
+                        $any($event.target).checked
+                      )
+                    "
+                  />
+                  <span>
+                    <strong>{{ criterion.name }}</strong>
+                    <small>{{ criterion.dataSource }}</small>
+                  </span>
+                </label>
+              }
+            </div>
+          </details>
+
+          <button
+            class="button button--primary compare-action"
+            type="button"
+            [disabled]="
+              comparisonSiteIds().size < 2 ||
+              comparisonSiteIds().size > 5 ||
+              !comparisonScenarioId() ||
+              comparisonMetricKeys().size === 0 ||
+              comparisonSaving()
+            "
+            (click)="saveComparison()"
+          >
+            <svg lucideColumns3 aria-hidden="true"></svg>
+            {{
+              comparisonSaving() ? 'Comparing and saving…' : 'Compare & save'
+            }}
+          </button>
+        </div>
+      </section>
+    }
   }
 
   @if (createModalOpen()) {

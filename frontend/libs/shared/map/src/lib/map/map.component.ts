@@ -512,12 +512,16 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       paint: {
         'fill-color': [
           'case',
+          ['==', ['get', 'comparisonSelected'], true],
+          '#6366f1',
           ['==', ['get', 'status'], 'Archived'],
           '#94a3b8',
           '#10b981',
         ],
         'fill-opacity': [
           'case',
+          ['==', ['get', 'comparisonSelected'], true],
+          0.42,
           ['==', ['get', 'status'], 'Archived'],
           0.2,
           0.38,
@@ -531,11 +535,18 @@ export class MapComponent implements AfterViewInit, OnDestroy {
       paint: {
         'line-color': [
           'case',
+          ['==', ['get', 'comparisonSelected'], true],
+          '#4338ca',
           ['==', ['get', 'status'], 'Archived'],
           '#64748b',
           '#047857',
         ],
-        'line-width': 2,
+        'line-width': [
+          'case',
+          ['==', ['get', 'comparisonSelected'], true],
+          2.5,
+          2,
+        ],
       },
     });
     this.map.addLayer({

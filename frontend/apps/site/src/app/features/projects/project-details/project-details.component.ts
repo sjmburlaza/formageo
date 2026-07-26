@@ -17,11 +17,13 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
+  ComparisonsApiService,
   getApiErrorMessage,
   LayersApiService,
   ProjectsApiService,
+  ScoringApiService,
   SitesApiService,
 } from '@frontend/api-client';
 import {
@@ -35,10 +37,12 @@ import {
 } from '@frontend/map';
 import {
   AnalysisEvidenceResult,
+  ComparisonSummary,
   GeoJsonPolygon,
   LayerDefinition,
   Project,
   ProjectLayerPreference,
+  ScoringScenario,
   Site,
   SiteSummary,
 } from '@frontend/models';
@@ -103,10 +107,13 @@ export class ProjectDetailsComponent implements OnInit {
   private mapComponent?: MapComponent;
 
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectsApi = inject(ProjectsApiService);
   private readonly sitesApi = inject(SitesApiService);
   private readonly layersApi = inject(LayersApiService);
+  private readonly scoringApi = inject(ScoringApiService);
+  private readonly comparisonsApi = inject(ComparisonsApiService);
   private summaryRequestSequence = 0;
   private layerPreferencesSaveTimer?: ReturnType<typeof setTimeout>;
 
@@ -150,11 +157,31 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly hiddenSiteIds = signal<ReadonlySet<string>>(new Set());
   protected readonly activeInspectorTab = signal<InspectorTab>('overview');
   protected readonly renaming = signal(false);
+  protected readonly scoringScenarios = signal<ScoringScenario[]>([]);
+  protected readonly savedComparisons = signal<ComparisonSummary[]>([]);
+  protected readonly comparisonMode = signal(false);
+  protected readonly comparisonSiteIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly comparisonScenarioId = signal<string | null>(null);
+  protected readonly comparisonMetricKeys = signal<ReadonlySet<string>>(
+    new Set(),
+  );
+  protected readonly comparisonSaving = signal(false);
+  protected readonly comparisonSites = computed(() => {
+    const selectedIds = this.comparisonSiteIds();
+    return this.sites().filter((site) => selectedIds.has(site.id));
+  });
+  protected readonly comparisonScenario = computed(
+    () =>
+      this.scoringScenarios().find(
+        (scenario) => scenario.id === this.comparisonScenarioId(),
+      ) ?? null,
+  );
 
   protected readonly mapFeatures = computed<MapFeature[]>(() => {
     const hiddenIds = this.hiddenSiteIds();
     const editingSiteId = this.editingSiteId();
     const unsavedGeometry = this.unsavedGeometry();
+    const comparisonIds = this.comparisonSiteIds();
 
     return this.sites().map((site) => ({
       id: site.id,
@@ -166,6 +193,7 @@ export class ProjectDetailsComponent implements OnInit {
       properties: {
         name: site.name,
         createdAtUtc: site.createdAtUtc,
+        comparisonSelected: comparisonIds.has(site.id),
         status: site.status,
       },
     }));
@@ -337,7 +365,154 @@ export class ProjectDetailsComponent implements OnInit {
       });
   }
 
+  protected startComparisonMode(): void {
+    if (this.comparisonMode()) {
+      this.cancelComparisonMode();
+      return;
+    }
+
+    if (!this.confirmDiscardGeometry('Start a site comparison')) {
+      return;
+    }
+
+    this.discardBoundaryDraft();
+    const initiallySelected = this.selectedSiteId();
+    this.comparisonSiteIds.set(
+      new Set(initiallySelected ? [initiallySelected] : []),
+    );
+    this.selectedSiteId.set(null);
+    this.siteSummary.set(null);
+    this.comparisonMode.set(true);
+    this.apiErrorState.set(null);
+
+    const scenario = this.scoringScenarios()[0];
+    if (scenario) {
+      this.selectComparisonScenario(scenario.id);
+    } else {
+      this.comparisonScenarioId.set(null);
+      this.comparisonMetricKeys.set(new Set());
+      this.apiErrorState.set(
+        'Save a scoring scenario from any site before comparing candidates.',
+      );
+    }
+  }
+
+  protected cancelComparisonMode(): void {
+    this.comparisonMode.set(false);
+    this.comparisonSiteIds.set(new Set());
+    this.comparisonScenarioId.set(null);
+    this.comparisonMetricKeys.set(new Set());
+  }
+
+  protected toggleComparisonSite(site: Site): void {
+    const selected = this.comparisonSiteIds();
+
+    if (!selected.has(site.id) && selected.size >= 5) {
+      this.apiErrorState.set(
+        'A comparison can include no more than five sites.',
+      );
+      return;
+    }
+
+    this.comparisonSiteIds.update((current) => {
+      const next = new Set(current);
+      if (next.has(site.id)) {
+        next.delete(site.id);
+      } else {
+        next.add(site.id);
+      }
+      return next;
+    });
+    this.apiErrorState.set(null);
+  }
+
+  protected removeComparisonSite(siteId: string): void {
+    this.comparisonSiteIds.update((current) => {
+      const next = new Set(current);
+      next.delete(siteId);
+      return next;
+    });
+  }
+
+  protected selectComparisonScenario(scenarioId: string): void {
+    const scenario = this.scoringScenarios().find(
+      (candidate) => candidate.id === scenarioId,
+    );
+    if (!scenario) return;
+
+    this.comparisonScenarioId.set(scenario.id);
+    this.comparisonMetricKeys.set(
+      new Set(
+        [...scenario.latestModel.criteria]
+          .sort((left, right) => left.sortOrder - right.sortOrder)
+          .map((criterion) => criterion.key),
+      ),
+    );
+  }
+
+  protected toggleComparisonMetric(metricKey: string, checked: boolean): void {
+    this.comparisonMetricKeys.update((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(metricKey);
+      } else {
+        next.delete(metricKey);
+      }
+      return next;
+    });
+  }
+
+  protected saveComparison(): void {
+    const project = this.project();
+    const scenarioId = this.comparisonScenarioId();
+
+    if (
+      !project ||
+      !scenarioId ||
+      this.comparisonSiteIds().size < 2 ||
+      this.comparisonSiteIds().size > 5 ||
+      this.comparisonMetricKeys().size === 0 ||
+      this.comparisonSaving()
+    ) {
+      return;
+    }
+
+    this.comparisonSaving.set(true);
+    this.apiErrorState.set(null);
+    this.comparisonsApi
+      .createComparison(project.id, {
+        scoringScenarioId: scenarioId,
+        siteIds: [...this.comparisonSiteIds()],
+        metricKeys: [...this.comparisonMetricKeys()],
+      })
+      .pipe(finalize(() => this.comparisonSaving.set(false)))
+      .subscribe({
+        next: (comparison) => {
+          void this.router.navigate(['/comparisons', comparison.id]);
+        },
+        error: (error: unknown) => {
+          this.apiErrorState.set(
+            getApiErrorMessage(
+              error,
+              'The comparison could not be calculated and saved.',
+            ),
+          );
+        },
+      });
+  }
+
+  protected openSavedComparison(comparisonId: string): void {
+    if (comparisonId) {
+      void this.router.navigate(['/comparisons', comparisonId]);
+    }
+  }
+
   protected selectSite(site: Site): void {
+    if (this.comparisonMode()) {
+      this.toggleComparisonSite(site);
+      return;
+    }
+
     if (
       site.id !== this.selectedSiteId() &&
       !this.confirmDiscardGeometry(`Select "${site.name}"`)
@@ -695,6 +870,7 @@ export class ProjectDetailsComponent implements OnInit {
             nextIds.delete(site.id);
             return nextIds;
           });
+          this.removeComparisonSite(site.id);
           this.project.update((currentProject) =>
             currentProject
               ? {
@@ -784,18 +960,35 @@ export class ProjectDetailsComponent implements OnInit {
     this.summaryRequestSequence += 1;
     this.discardBoundaryDraft();
     this.hiddenSiteIds.set(new Set());
+    this.comparisonMode.set(false);
+    this.comparisonSiteIds.set(new Set());
+    this.comparisonScenarioId.set(null);
+    this.comparisonMetricKeys.set(new Set());
+    this.scoringScenarios.set([]);
+    this.savedComparisons.set([]);
 
     forkJoin({
       project: this.projectsApi.getProject(projectId),
       sites: this.sitesApi.getProjectSites(projectId),
       layers: this.layersApi.getLayers(),
       projectLayers: this.layersApi.getProjectLayers(projectId),
+      scoringScenarios: this.scoringApi.getProjectScenarios(projectId),
+      savedComparisons: this.comparisonsApi.getProjectComparisons(projectId),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ project, sites, layers, projectLayers }) => {
+        next: ({
+          project,
+          sites,
+          layers,
+          projectLayers,
+          scoringScenarios,
+          savedComparisons,
+        }) => {
           this.project.set(project);
           this.sites.set(sites);
+          this.scoringScenarios.set(scoringScenarios);
+          this.savedComparisons.set(savedComparisons);
           this.layerOverlays.set(this.createMapOverlays(layers, projectLayers));
           this.loadLayerLegends(layers);
         },

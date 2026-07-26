@@ -9,6 +9,7 @@ import {
 import { Site } from '@frontend/models';
 import { EmptyStateComponent } from '@frontend/ui';
 import {
+  LucideCheck,
   LucideEye,
   LucideEyeOff,
   LucideLandPlot,
@@ -20,6 +21,7 @@ import {
   standalone: true,
   imports: [
     EmptyStateComponent,
+    LucideCheck,
     LucideEye,
     LucideEyeOff,
     LucideLandPlot,
@@ -33,10 +35,14 @@ export class ProjectSiteListComponent {
   readonly sites = input<readonly Site[]>([]);
   readonly selectedSiteId = input<string | null>(null);
   readonly hiddenSiteIds = input<ReadonlySet<string>>(new Set());
+  readonly comparisonMode = input(false);
+  readonly comparisonSiteIds = input<ReadonlySet<string>>(new Set());
+  readonly comparisonLimit = input(5);
 
   readonly drawRequested = output<void>();
   readonly siteSelected = output<Site>();
   readonly visibilityToggled = output<Site>();
+  readonly comparisonToggled = output<Site>();
 
   protected readonly searchQuery = signal('');
   protected readonly filteredSites = computed(() => {

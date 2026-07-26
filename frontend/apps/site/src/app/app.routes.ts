@@ -31,6 +31,13 @@ export const appRoutes: Routes = [
       ),
   },
   {
+    path: 'comparisons/:comparisonId',
+    loadComponent: () =>
+      import('./features/comparisons/comparison-details.component').then(
+        (module) => module.ComparisonDetailsComponent,
+      ),
+  },
+  {
     path: '',
     pathMatch: 'full',
     redirectTo: 'projects',

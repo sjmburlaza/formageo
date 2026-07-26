@@ -1,4 +1,5 @@
 using FormaGeo.Domain.Analyses;
+using FormaGeo.Domain.Comparisons;
 using FormaGeo.Domain.Layers;
 using FormaGeo.Domain.Projects;
 using FormaGeo.Domain.Scoring;
@@ -20,6 +21,9 @@ public sealed class FormaGeoDbContext : DbContext
     public DbSet<Site> Sites => Set<Site>();
 
     public DbSet<AnalysisRun> AnalysisRuns => Set<AnalysisRun>();
+
+    public DbSet<SiteComparison> SiteComparisons =>
+        Set<SiteComparison>();
 
     public DbSet<DataSource> DataSources => Set<DataSource>();
 
