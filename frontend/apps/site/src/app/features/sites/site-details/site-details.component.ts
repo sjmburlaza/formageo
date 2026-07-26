@@ -20,6 +20,7 @@ import {
 import {
   LucideArrowLeft,
   LucideCircleAlert,
+  LucideChartNoAxesCombined,
   LucideTrash2,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
@@ -32,6 +33,7 @@ import { SiteAnalysisComponent } from '../../analyses/site-analysis.component';
     CommonModule,
     LucideArrowLeft,
     LucideCircleAlert,
+    LucideChartNoAxesCombined,
     LucideTrash2,
     MapComponent,
     RouterLink,

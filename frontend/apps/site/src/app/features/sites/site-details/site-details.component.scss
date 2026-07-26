@@ -81,6 +81,13 @@ h2 {
   font: var(--fg-type-body-sm);
 }
 
+.site-header__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--fg-space-2);
+}
+
 .status-badge {
   padding: var(--fg-space-1) var(--fg-space-2);
   display: inline-flex;
@@ -284,6 +291,12 @@ h2 {
 
   .site-header {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .site-header__actions {
+    width: 100%;
+    align-items: stretch;
     flex-direction: column;
   }
 

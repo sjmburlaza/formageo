@@ -1,6 +1,7 @@
 using FormaGeo.Domain.Analyses;
 using FormaGeo.Domain.Layers;
 using FormaGeo.Domain.Projects;
+using FormaGeo.Domain.Scoring;
 using FormaGeo.Domain.Sites;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,18 @@ public sealed class FormaGeoDbContext : DbContext
     public DbSet<ProjectLayer> ProjectLayers => Set<ProjectLayer>();
 
     public DbSet<LayerLegend> LayerLegends => Set<LayerLegend>();
+
+    public DbSet<ScoringScenario> ScoringScenarios =>
+        Set<ScoringScenario>();
+
+    public DbSet<ScoringModel> ScoringModels =>
+        Set<ScoringModel>();
+
+    public DbSet<ScoringCriterion> ScoringCriteria =>
+        Set<ScoringCriterion>();
+
+    public DbSet<ScoringResult> ScoringResults =>
+        Set<ScoringResult>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)

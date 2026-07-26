@@ -1,6 +1,7 @@
 using FormaGeo.Application.Analyses;
 using FormaGeo.Application.Layers;
 using FormaGeo.Application.Projects;
+using FormaGeo.Application.Scoring;
 using FormaGeo.Application.Sites;
 using FormaGeo.Application.Sites.Summaries;
 using FormaGeo.Infrastructure.Analyses;
@@ -54,6 +55,13 @@ public static class DependencyInjection
         services.AddScoped<
             IAnalysisRunRepository,
             AnalysisRunRepository>();
+
+        services.AddScoped<
+            IScoringRepository,
+            ScoringRepository>();
+        services.AddScoped<
+            IScoringValueProvider,
+            AnalysisScoringValueProvider>();
 
         services.AddScoped<AnalysisRunProcessor>();
         services.AddScoped<DevelopmentMockDataSeeder>();

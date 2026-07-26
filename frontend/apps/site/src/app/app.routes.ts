@@ -17,6 +17,13 @@ export const appRoutes: Routes = [
     ],
   },
   {
+    path: 'sites/:siteId/scoring',
+    loadComponent: () =>
+      import('./features/scoring/scoring-builder.component').then(
+        (module) => module.ScoringBuilderComponent,
+      ),
+  },
+  {
     path: 'sites/:siteId',
     loadComponent: () =>
       import('./features/sites/site-details/site-details.component').then(
