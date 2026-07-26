@@ -706,26 +706,7 @@ p {
 }
 
 .wizard-error {
-  padding: 0.75rem 0.85rem;
   margin-top: 0.9rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  border: 1px solid var(--fg-error-border);
-  border-radius: var(--fg-radius-md);
-  color: var(--fg-error-text);
-  background: var(--fg-error-bg);
-}
-
-.wizard-error svg {
-  width: 1rem;
-  height: 1rem;
-  flex: none;
-}
-
-.wizard-error p {
-  margin: 0;
-  font: var(--fg-type-body-sm);
 }
 
 .wizard-footer {

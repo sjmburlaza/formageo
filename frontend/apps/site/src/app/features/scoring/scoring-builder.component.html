@@ -1,0 +1,586 @@
+<main class="scoring-page">
+  <nav class="app-bar" aria-label="Primary navigation">
+    <a class="brand" routerLink="/projects">
+      <span class="brand__mark" aria-hidden="true">F</span>
+      <span>FormaGeo</span>
+    </a>
+    <span class="app-bar__context">Suitability scoring</span>
+  </nav>
+
+  @if (loading()) {
+    <fg-page-state
+      title="Opening scoring builder"
+      description="Loading criteria, presets, and saved scenarios…"
+    />
+  } @else if (!site() || !catalog()) {
+    <fg-page-state
+      tone="error"
+      title="Unable to open suitability scoring"
+      [description]="
+        errorMessage() ?? 'Suitability scoring could not be loaded.'
+      "
+    >
+      <a class="button button--secondary" routerLink="/projects">
+        Back to projects
+      </a>
+    </fg-page-state>
+  } @else {
+    <div class="scoring-shell">
+      <a class="back-link" [routerLink]="['/sites', site()!.id]">
+        <svg lucideArrowLeft aria-hidden="true"></svg>
+        Back to {{ site()!.name }}
+      </a>
+
+      <header class="builder-header">
+        <div>
+          <p class="eyebrow">Decision model</p>
+          <h1>Site suitability scoring</h1>
+          <p>
+            Build a transparent, versioned model and compare candidate sites
+            without hiding missing evidence.
+          </p>
+        </div>
+        <div class="header-actions">
+          <button
+            class="button button--secondary"
+            type="button"
+            (click)="newScenario()"
+          >
+            <svg lucidePlus aria-hidden="true"></svg>
+            New scenario
+          </button>
+          <label class="scenario-select">
+            <span>Saved scenario</span>
+            <select
+              [value]="activeScenarioId() ?? ''"
+              (change)="selectScenario($any($event.target).value)"
+            >
+              <option value="" disabled>
+                {{
+                  scenarios().length
+                    ? 'Choose a scenario'
+                    : 'No saved scenarios'
+                }}
+              </option>
+              @for (scenario of scenarios(); track scenario.id) {
+                <option [value]="scenario.id">
+                  {{ scenario.name }} · v{{ scenario.latestModel.version }}
+                </option>
+              }
+            </select>
+            <svg lucideChevronDown aria-hidden="true"></svg>
+          </label>
+        </div>
+      </header>
+
+      @if (errorMessage()) {
+        <fg-alert
+          class="builder-message"
+          tone="error"
+          [message]="errorMessage()!"
+          actionLabel="Dismiss"
+          (actionTriggered)="errorMessage.set(null)"
+        />
+      }
+      @if (noticeMessage()) {
+        <fg-alert
+          class="builder-message"
+          tone="info"
+          [message]="noticeMessage()!"
+        />
+      }
+
+      <section class="builder-grid" aria-label="Scoring builder">
+        <div class="builder-column builder-column--criteria">
+          <section class="panel scenario-panel">
+            <header class="panel-heading">
+              <div>
+                <span class="step">01</span>
+                <div>
+                  <h2>Scenario</h2>
+                  <p>Name the decision model and start from a preset.</p>
+                </div>
+              </div>
+              @if (activeScenarioId()) {
+                <span class="version-pill">
+                  Model v{{
+                    scenarios()
+                      .find((scenario) => scenario.id === activeScenarioId())
+                      ?.latestModel?.version
+                  }}
+                </span>
+              } @else {
+                <span class="version-pill version-pill--draft"
+                  >Unsaved draft</span
+                >
+              }
+            </header>
+
+            <label class="field">
+              <span>Scenario name</span>
+              <input
+                type="text"
+                maxlength="200"
+                [value]="scenarioName()"
+                (input)="setScenarioName($any($event.target).value)"
+              />
+            </label>
+
+            <div class="preset-list" aria-label="Scoring presets">
+              @for (preset of catalog()!.presets; track preset.key) {
+                <button type="button" (click)="applyPreset(preset)">
+                  <span><svg lucideSparkles aria-hidden="true"></svg></span>
+                  <strong>{{ preset.name }}</strong>
+                  <small>{{ preset.description }}</small>
+                </button>
+              }
+            </div>
+          </section>
+
+          <section class="panel criteria-panel">
+            <header class="panel-heading">
+              <div>
+                <span class="step">02</span>
+                <div>
+                  <h2>Criteria & weights</h2>
+                  <p>
+                    Define how each source contributes to the final 100 points.
+                  </p>
+                </div>
+              </div>
+              <div class="criterion-picker">
+                <button
+                  class="add-criterion"
+                  type="button"
+                  [disabled]="availableCriteria().length === 0"
+                  (click)="showCriterionPicker.set(!showCriterionPicker())"
+                >
+                  <svg lucidePlus aria-hidden="true"></svg>
+                  Add criterion
+                </button>
+                @if (showCriterionPicker()) {
+                  <div class="criterion-menu">
+                    @for (
+                      definition of availableCriteria();
+                      track definition.key
+                    ) {
+                      <button type="button" (click)="addCriterion(definition)">
+                        <strong>{{ definition.name }}</strong>
+                        <span>{{ definition.dataSource }}</span>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </header>
+
+            <div class="criterion-list">
+              @for (
+                criterion of criteria();
+                track criterion.key;
+                let index = $index
+              ) {
+                <fg-scoring-criterion-card
+                  [criterion]="criterion"
+                  [index]="index"
+                  (removed)="removeCriterion($event)"
+                  (changed)="updateCriterion($event.key, $event.change)"
+                />
+              } @empty {
+                <fg-empty-state
+                  icon="layers"
+                  title="No criteria selected"
+                  description="Add at least one criterion to build a scoring model."
+                  [compact]="true"
+                />
+              }
+            </div>
+          </section>
+
+          <section class="panel comparison-panel">
+            <header class="panel-heading">
+              <div>
+                <span class="step">03</span>
+                <div>
+                  <h2>Sites to compare</h2>
+                  <p>
+                    Run the same saved model version across candidate sites.
+                  </p>
+                </div>
+              </div>
+            </header>
+            <div class="site-checklist">
+              @for (candidate of projectSites(); track candidate.id) {
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="selectedSiteIds().has(candidate.id)"
+                    (change)="
+                      toggleComparisonSite(
+                        candidate.id,
+                        $any($event.target).checked
+                      )
+                    "
+                  />
+                  <span>
+                    <strong>{{ candidate.name }}</strong>
+                    <small>{{
+                      candidate.id === site()!.id
+                        ? 'Current site'
+                        : 'Comparison site'
+                    }}</small>
+                  </span>
+                </label>
+              }
+            </div>
+          </section>
+        </div>
+
+        <aside class="builder-column builder-column--summary">
+          <section class="panel weight-summary">
+            <header>
+              <div>
+                <p class="eyebrow">Live model check</p>
+                <h2>Weight summary</h2>
+              </div>
+              <div
+                class="weight-ring"
+                [class.weight-ring--valid]="
+                  Math.abs(weightDifference()) < 0.001
+                "
+                [style.--weight]="Math.min(100, weightTotal()) + '%'"
+              >
+                <strong>{{ weightTotal() | number: '1.0-2' }}</strong>
+                <span>/ 100</span>
+              </div>
+            </header>
+
+            <div class="weight-bars">
+              @for (criterion of criteria(); track criterion.key) {
+                <div>
+                  <span>{{ criterion.name }}</span>
+                  <strong>{{ criterion.weight | number: '1.0-2' }}%</strong>
+                  <i [style.width.%]="Math.min(100, criterion.weight)"></i>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="panel validation-panel">
+            <header>
+              <p class="eyebrow">Before scoring</p>
+              <h2>Validation</h2>
+            </header>
+
+            @if (Math.abs(weightDifference()) >= 0.001) {
+              <div class="validation-item validation-item--error">
+                <svg lucideCircleAlert aria-hidden="true"></svg>
+                <span>
+                  <strong>Weights must total 100</strong>
+                  @if (weightDifference() > 0) {
+                    Add {{ weightDifference() | number: '1.0-2' }} percentage
+                    points.
+                  } @else {
+                    Remove
+                    {{ -weightDifference() | number: '1.0-2' }} percentage
+                    points.
+                  }
+                </span>
+              </div>
+            } @else {
+              <div class="validation-item validation-item--success">
+                <svg lucideCheck aria-hidden="true"></svg>
+                <span>
+                  <strong>Weights are valid</strong>
+                  Contributions can reconcile to a 100-point score.
+                </span>
+              </div>
+            }
+
+            @for (message of thresholdErrors(); track message) {
+              <div class="validation-item validation-item--error">
+                <svg lucideCircleAlert aria-hidden="true"></svg>
+                <span><strong>Invalid threshold</strong>{{ message }}</span>
+              </div>
+            }
+
+            @for (message of conflictWarnings(); track message) {
+              <div class="validation-item validation-item--warning">
+                <svg lucideCircleHelp aria-hidden="true"></svg>
+                <span
+                  ><strong>Potential criteria conflict</strong
+                  >{{ message }}</span
+                >
+              </div>
+            }
+
+            @if (
+              thresholdErrors().length === 0 && conflictWarnings().length === 0
+            ) {
+              <div class="validation-item validation-item--neutral">
+                <svg lucideCheck aria-hidden="true"></svg>
+                <span>
+                  <strong>No criteria conflicts detected</strong>
+                  Thresholds and directions are internally consistent.
+                </span>
+              </div>
+            }
+          </section>
+
+          <section class="panel projected-panel">
+            <header>
+              <p class="eyebrow">Projected breakdown</p>
+              <h2>Contribution structure</h2>
+            </header>
+            <p>
+              Actual values are normalized to 0–100, then multiplied by the
+              effective weight. Missing-data rules are applied before totals.
+            </p>
+            <div class="projected-list">
+              @for (criterion of criteria(); track criterion.key) {
+                <div>
+                  <span>{{ criterion.name }}</span>
+                  <strong
+                    >up to {{ criterion.weight | number: '1.0-2' }} pts</strong
+                  >
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="action-panel">
+            <div class="action-panel__secondary">
+              <button
+                class="button button--secondary"
+                type="button"
+                [disabled]="!formValid() || saving()"
+                (click)="saveScenario()"
+              >
+                <svg lucideSave aria-hidden="true"></svg>
+                {{
+                  saving()
+                    ? 'Saving…'
+                    : activeScenarioId()
+                      ? 'Save new version'
+                      : 'Save scenario'
+                }}
+              </button>
+              <button
+                class="button button--secondary"
+                type="button"
+                [disabled]="!activeScenarioId() || saving()"
+                (click)="duplicateScenario()"
+              >
+                <svg lucideCopy aria-hidden="true"></svg>
+                Duplicate
+              </button>
+            </div>
+            <button
+              class="run-scoring"
+              type="button"
+              [disabled]="
+                !formValid() ||
+                running() ||
+                saving() ||
+                selectedSiteIds().size === 0
+              "
+              (click)="runScoring()"
+            >
+              <svg lucideChartNoAxesCombined aria-hidden="true"></svg>
+              <span>
+                <strong>{{
+                  running() ? 'Calculating scores…' : 'Run scoring'
+                }}</strong>
+                <small>
+                  {{ selectedSiteIds().size }}
+                  {{ selectedSiteIds().size === 1 ? 'site' : 'sites' }} · saved
+                  model version
+                </small>
+              </span>
+            </button>
+          </section>
+
+          @if (selectedResult(); as result) {
+            <section class="panel score-result">
+              <header>
+                <div>
+                  <p class="eyebrow">Score result</p>
+                  <h2>{{ result.siteName }}</h2>
+                  <span
+                    >Model v{{ result.modelVersion }} ·
+                    {{ result.calculatedAtUtc | date: 'medium' }}</span
+                  >
+                </div>
+                <div
+                  class="overall-score"
+                  [class]="scoreTone(result.overallScore)"
+                >
+                  @if (result.overallScore !== null) {
+                    <strong>{{ result.overallScore | number: '1.0-2' }}</strong>
+                    <span>/ 100</span>
+                  } @else {
+                    <svg lucideCircleAlert aria-hidden="true"></svg>
+                    <span>Cannot score</span>
+                  }
+                </div>
+              </header>
+              <div class="rating-row">
+                <strong>{{ result.rating }}</strong>
+                <span>
+                  Contributions total
+                  {{ result.overallScore ?? 0 | number: '1.0-2' }}
+                  points
+                </span>
+              </div>
+
+              @for (message of result.validationMessages; track message) {
+                <div class="result-warning">
+                  <svg lucideCircleAlert aria-hidden="true"></svg>
+                  {{ message }}
+                </div>
+              }
+
+              <div class="breakdown-table-wrap">
+                <table>
+                  <caption>
+                    Transparent criterion contribution
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Criterion</th>
+                      <th scope="col">Raw</th>
+                      <th scope="col">Score</th>
+                      <th scope="col">Weight</th>
+                      <th scope="col">Points</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (
+                      criterion of result.criteria;
+                      track criterion.criterionKey
+                    ) {
+                      <tr [class.breakdown-row--missing]="criterion.isMissing">
+                        <th scope="row">
+                          {{ criterion.name }}
+                          <small>{{ criterion.dataSource }}</small>
+                        </th>
+                        <td>
+                          {{ formatValue(criterion.rawValue, criterion.unit) }}
+                        </td>
+                        <td>
+                          {{
+                            criterion.normalizedScore === null
+                              ? '—'
+                              : (criterion.normalizedScore | number: '1.0-2')
+                          }}
+                        </td>
+                        <td>
+                          {{ criterion.effectiveWeight | number: '1.0-2' }}%
+                        </td>
+                        <td>
+                          <strong>{{
+                            criterion.contribution | number: '1.0-2'
+                          }}</strong>
+                        </td>
+                      </tr>
+                      <tr class="explanation-row">
+                        <td colspan="5">{{ criterion.explanation }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  @if (result.isScoreable) {
+                    <tfoot>
+                      <tr>
+                        <th colspan="4" scope="row">Final score</th>
+                        <td>{{ result.overallScore | number: '1.0-2' }}</td>
+                      </tr>
+                    </tfoot>
+                  }
+                </table>
+              </div>
+
+              <div class="insight-grid">
+                <section>
+                  <h3>Strengths</h3>
+                  @for (strength of result.strengths; track strength) {
+                    <p>
+                      <svg lucideCheck aria-hidden="true"></svg>{{ strength }}
+                    </p>
+                  } @empty {
+                    <p>No criterion reached the strength threshold.</p>
+                  }
+                </section>
+                <section>
+                  <h3>Weaknesses</h3>
+                  @for (weakness of result.weaknesses; track weakness) {
+                    <p>
+                      <svg lucideCircleAlert aria-hidden="true"></svg
+                      >{{ weakness }}
+                    </p>
+                  } @empty {
+                    <p>No low-scoring criteria were identified.</p>
+                  }
+                </section>
+              </div>
+
+              @if (result.missingInformation.length > 0) {
+                <section class="missing-panel">
+                  <h3>Missing information</h3>
+                  @for (missing of result.missingInformation; track missing) {
+                    <p>{{ missing }}</p>
+                  }
+                </section>
+              }
+            </section>
+          }
+
+          @if (latestResults().length > 0) {
+            <section class="panel comparison-results">
+              <header>
+                <p class="eyebrow">Site comparison</p>
+                <h2>Same model, comparable results</h2>
+              </header>
+              <div class="ranking-list">
+                @for (
+                  result of latestResults();
+                  track result.siteId;
+                  let rank = $index
+                ) {
+                  <button
+                    type="button"
+                    [class.ranking-item--active]="
+                      selectedResult()!.siteId === result.siteId
+                    "
+                    (click)="selectResult(result.siteId)"
+                  >
+                    <span>{{ rank + 1 }}</span>
+                    <strong>{{ result.siteName }}</strong>
+                    <small>{{ result.rating }}</small>
+                    <b>{{
+                      result.overallScore === null
+                        ? 'N/A'
+                        : (result.overallScore | number: '1.0-2')
+                    }}</b>
+                  </button>
+                }
+              </div>
+              <div class="result-map" aria-label="Scored sites map">
+                <fg-map
+                  [features]="resultMapFeatures()"
+                  [interactionTools]="false"
+                  [selectedFeatureId]="selectedResult()!.siteId"
+                  (featureSelected)="selectResult($event.featureId)"
+                />
+              </div>
+              <p class="map-note">
+                <svg lucideMap aria-hidden="true"></svg>
+                Map boundaries use the same site records represented in the
+                ranking.
+              </p>
+            </section>
+          }
+        </aside>
+      </section>
+    </div>
+  }
+</main>

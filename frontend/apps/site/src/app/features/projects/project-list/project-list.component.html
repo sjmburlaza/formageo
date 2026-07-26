@@ -58,13 +58,13 @@
     </section>
 
     @if (errorMessage()) {
-      <div class="page-error" role="alert">
-        <svg lucideCircleAlert aria-hidden="true"></svg>
-        <p>{{ errorMessage() }}</p>
-        @if (!loading()) {
-          <button type="button" (click)="loadProjects()">Try again</button>
-        }
-      </div>
+      <fg-alert
+        class="project-list-alert"
+        tone="error"
+        [message]="errorMessage()!"
+        [actionLabel]="loading() ? null : 'Try again'"
+        (actionTriggered)="loadProjects()"
+      />
     }
 
     <section class="project-list">
@@ -84,67 +84,25 @@
       @if (loading()) {
         <div class="project-grid" aria-live="polite">
           @for (placeholder of [1, 2, 3]; track placeholder) {
-            <div class="project-card project-card--loading">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
+            <fg-project-card [loading]="true" />
           }
         </div>
       } @else if (projects().length === 0) {
-        <div class="empty-state">
-          <span class="empty-state__icon" aria-hidden="true">
-            <svg lucideLandPlot></svg>
-          </span>
-          <h3>Create your first project</h3>
-          <p>
-            Organize candidate sites, analysis criteria, spatial data, and
-            reports inside a project.
-          </p>
+        <fg-empty-state
+          appearance="bordered"
+          icon="projects"
+          title="Create your first project"
+          description="Organize candidate sites, analysis criteria, spatial data, and reports inside a project."
+        >
           <a class="button button--secondary" href="#project-name">
             Create project
           </a>
-        </div>
+        </fg-empty-state>
       } @else {
         <ul class="project-grid">
           @for (project of projects(); track project.id) {
             <li>
-              <article class="project-card">
-                <div class="project-card__top">
-                  <span class="project-card__icon" aria-hidden="true">
-                    <svg lucideLandPlot></svg>
-                  </span>
-                  <details class="project-menu">
-                    <summary aria-label="Open project menu">
-                      <svg lucideEllipsis aria-hidden="true"></svg>
-                    </summary>
-                    <div>
-                      <a [routerLink]="['/projects', project.id]">
-                        Open workspace
-                      </a>
-                    </div>
-                  </details>
-                </div>
-
-                <div class="project-card__body">
-                  <h3>{{ project.name }}</h3>
-                  <p>Created {{ project.createdAtUtc | date: 'mediumDate' }}</p>
-                </div>
-
-                <div class="project-card__footer">
-                  <span>
-                    <strong>{{ project.siteCount }}</strong>
-                    {{ project.siteCount === 1 ? 'site' : 'sites' }}
-                  </span>
-                  <a
-                    class="open-project"
-                    [routerLink]="['/projects', project.id]"
-                  >
-                    Open project
-                    <svg lucideArrowRight aria-hidden="true"></svg>
-                  </a>
-                </div>
-              </article>
+              <fg-project-card [project]="project" />
             </li>
           }
         </ul>

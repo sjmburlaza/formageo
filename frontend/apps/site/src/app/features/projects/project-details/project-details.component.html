@@ -1,24 +1,24 @@
 <main class="workspace-page">
   @if (loading()) {
-    <section class="page-state" aria-live="polite">
-      <span class="spinner" aria-hidden="true"></span>
-      <h1>Opening map workspace</h1>
-      <p>Loading the project and its saved boundaries…</p>
-    </section>
+    <fg-page-state
+      title="Opening map workspace"
+      description="Loading the project and its saved boundaries…"
+      [fullViewport]="true"
+    />
   } @else if (!project()) {
-    <section class="page-state page-state--error" role="alert">
-      <svg class="state-icon" lucideCircleAlert aria-hidden="true"></svg>
-      <h1>Unable to open project</h1>
-      <p>{{ errorMessage() }}</p>
-      <div class="state-actions">
-        <button class="button button--primary" type="button" (click)="retry()">
-          Try again
-        </button>
-        <a class="button button--secondary" routerLink="/projects">
-          Back to projects
-        </a>
-      </div>
-    </section>
+    <fg-page-state
+      tone="error"
+      title="Unable to open project"
+      [description]="errorMessage() ?? 'The project could not be loaded.'"
+      [fullViewport]="true"
+    >
+      <button class="button button--primary" type="button" (click)="retry()">
+        Try again
+      </button>
+      <a class="button button--secondary" routerLink="/projects">
+        Back to projects
+      </a>
+    </fg-page-state>
   } @else {
     <header class="workspace-toolbar">
       <a
@@ -63,117 +63,24 @@
     </header>
 
     @if (apiErrorState()) {
-      <div class="error-banner" role="alert">
-        <svg lucideCircleAlert aria-hidden="true"></svg>
-        <p>{{ apiErrorState() }}</p>
-        <button type="button" (click)="apiErrorState.set(null)">Dismiss</button>
-      </div>
+      <fg-alert
+        class="workspace-alert"
+        tone="error"
+        [message]="apiErrorState()!"
+        actionLabel="Dismiss"
+        (actionTriggered)="apiErrorState.set(null)"
+      />
     }
 
     <section class="workspace" aria-label="Project map workspace">
-      <aside class="sites-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Project boundaries</p>
-            <h2>Sites</h2>
-          </div>
-          <span class="count-badge">{{ sites().length }}</span>
-        </div>
-
-        <label class="site-search">
-          <svg lucideSearch aria-hidden="true"></svg>
-          <input
-            type="search"
-            placeholder="Search sites"
-            aria-label="Search sites"
-            [value]="searchQuery()"
-            (input)="updateSearch($event)"
-          />
-        </label>
-
-        @if (sites().length === 0) {
-          <div class="sites-empty">
-            <span aria-hidden="true"><svg lucideLandPlot></svg></span>
-            <h3>No sites have been added</h3>
-            <p>
-              Add a location by drawing a boundary or importing spatial data.
-            </p>
-            <button
-              class="button button--primary button--full"
-              type="button"
-              (click)="startDrawing()"
-            >
-              Add site
-            </button>
-          </div>
-        } @else if (filteredSites().length === 0) {
-          <div class="sites-empty sites-empty--compact">
-            <h3>No matching sites</h3>
-            <p>Try a different search term.</p>
-          </div>
-        } @else {
-          <ul class="site-list">
-            @for (site of filteredSites(); track site.id) {
-              <li
-                class="site-list-item"
-                [class.site-list-item--active]="selectedSite()?.id === site.id"
-                [class.site-list-item--archived]="site.status === 'Archived'"
-              >
-                <button
-                  class="visibility-button"
-                  type="button"
-                  [class.visibility-button--hidden]="
-                    hiddenSiteIds().has(site.id)
-                  "
-                  [attr.aria-label]="
-                    (hiddenSiteIds().has(site.id) ? 'Show ' : 'Hide ') +
-                    site.name
-                  "
-                  (click)="toggleSiteVisibility(site, $event)"
-                >
-                  @if (hiddenSiteIds().has(site.id)) {
-                    <svg lucideEyeOff aria-hidden="true"></svg>
-                  } @else {
-                    <svg lucideEye aria-hidden="true"></svg>
-                  }
-                </button>
-
-                <button
-                  class="site-select-button"
-                  type="button"
-                  [attr.aria-pressed]="selectedSite()?.id === site.id"
-                  (click)="selectSite(site)"
-                >
-                  <span class="site-swatch" aria-hidden="true">
-                    <svg lucideLandPlot></svg>
-                  </span>
-                  <span class="site-copy">
-                    <strong>{{ site.name }}</strong>
-                    <small>
-                      {{ site.status }} ·
-                      {{ site.boundary.coordinates.length }}
-                      {{
-                        site.boundary.coordinates.length === 1
-                          ? 'ring'
-                          : 'rings'
-                      }}
-                    </small>
-                  </span>
-                  @if (selectedSite()?.id === site.id) {
-                    <span class="selected-indicator">Selected</span>
-                  }
-                </button>
-              </li>
-            }
-          </ul>
-        }
-
-        <footer class="panel-footer">
-          <span class="legend-swatch"></span>
-          <span>Site boundary</span>
-          <strong>EPSG:4326</strong>
-        </footer>
-      </aside>
+      <fg-project-site-list
+        [sites]="sites()"
+        [selectedSiteId]="selectedSite()?.id ?? null"
+        [hiddenSiteIds]="hiddenSiteIds()"
+        (drawRequested)="startDrawing()"
+        (siteSelected)="selectSite($event)"
+        (visibilityToggled)="toggleSiteVisibility($event)"
+      />
 
       <section class="map-panel" aria-label="Site boundary map">
         <fg-map
@@ -194,13 +101,11 @@
           <div class="inspector-heading">
             <p class="eyebrow">Site inspector</p>
             <h2>{{ site.name }}</h2>
-            <span
-              class="status-pill"
-              [class.status-pill--archived]="site.status === 'Archived'"
-            >
-              <i aria-hidden="true"></i>
-              {{ site.status }}
-            </span>
+            <fg-status-badge
+              class="inspector-status"
+              [label]="site.status"
+              [tone]="site.status === 'Archived' ? 'neutral' : 'success'"
+            />
           </div>
 
           <nav class="inspector-tabs" aria-label="Site inspector sections">
@@ -286,144 +191,13 @@
                   </dl>
                 }
 
-                <section
-                  class="site-summary"
-                  aria-labelledby="site-summary-title"
-                >
-                  <div class="site-summary__heading">
-                    <div>
-                      <p class="eyebrow">Spatial measurements</p>
-                      <h3 id="site-summary-title">Site summary</h3>
-                    </div>
-                    @if (siteSummary(); as summary) {
-                      <span>{{ summary.geometry.vertexCount }} vertices</span>
-                    }
-                  </div>
-
-                  @if (summaryLoading()) {
-                    <div class="summary-loading" aria-live="polite">
-                      <span class="spinner" aria-hidden="true"></span>
-                      Calculating measurements…
-                    </div>
-                  } @else if (summaryErrorMessage()) {
-                    <div class="summary-error" role="alert">
-                      <p>{{ summaryErrorMessage() }}</p>
-                      <button type="button" (click)="retrySiteSummary(site.id)">
-                        Try again
-                      </button>
-                    </div>
-                  } @else if (siteSummary(); as summary) {
-                    <div class="metric-grid">
-                      <article class="metric-card">
-                        <span>Area</span>
-                        <strong>
-                          {{
-                            formatArea(summary.measurements.areaSquareMetres)
-                          }}
-                        </strong>
-                      </article>
-                      <article class="metric-card">
-                        <span>Perimeter</span>
-                        <strong>
-                          {{
-                            formatPerimeter(
-                              summary.measurements.perimeterMetres
-                            )
-                          }}
-                        </strong>
-                      </article>
-                      <article class="metric-card metric-card--centroid">
-                        <span>Centroid · lon, lat</span>
-                        @if (summary.location.centroid) {
-                          <button
-                            type="button"
-                            title="Highlight centroid on map"
-                            (click)="highlightCentroid(summary)"
-                          >
-                            {{ formatCentroid(summary.location.centroid) }}
-                          </button>
-                        } @else {
-                          <strong>Unavailable</strong>
-                        }
-                      </article>
-                      <article
-                        class="metric-card"
-                        [class.metric-card--invalid]="!summary.geometry.isValid"
-                      >
-                        <span>Boundary</span>
-                        <strong>
-                          {{ summary.geometry.isValid ? 'Valid' : 'Invalid' }}
-                        </strong>
-                      </article>
-                    </div>
-
-                    <dl class="summary-details">
-                      <div>
-                        <dt>Coordinate system</dt>
-                        <dd>
-                          <strong>
-                            {{ summary.geometry.coordinateSystem }}
-                          </strong>
-                          <span>
-                            {{ summary.measurements.calculationMethod }}
-                          </span>
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Bounding box</dt>
-                        <dd class="bounding-box">
-                          <span>
-                            <small>West</small>
-                            {{
-                              formatCoordinate(
-                                summary.location.boundingBox.west
-                              )
-                            }}
-                          </span>
-                          <span>
-                            <small>North</small>
-                            {{
-                              formatCoordinate(
-                                summary.location.boundingBox.north
-                              )
-                            }}
-                          </span>
-                          <span>
-                            <small>East</small>
-                            {{
-                              formatCoordinate(
-                                summary.location.boundingBox.east
-                              )
-                            }}
-                          </span>
-                          <span>
-                            <small>South</small>
-                            {{
-                              formatCoordinate(
-                                summary.location.boundingBox.south
-                              )
-                            }}
-                          </span>
-                        </dd>
-                      </div>
-                    </dl>
-
-                    @if (summary.dataQualityWarnings.length > 0) {
-                      <div class="geometry-warning" role="alert">
-                        <svg lucideCircleAlert aria-hidden="true"></svg>
-                        <div>
-                          <strong>Geometry warning</strong>
-                          @for (
-                            warning of summary.dataQualityWarnings;
-                            track warning
-                          ) {
-                            <p>{{ warning }}</p>
-                          }
-                        </div>
-                      </div>
-                    }
-                  }
-                </section>
+                <fg-project-site-summary
+                  [summary]="siteSummary()"
+                  [loading]="summaryLoading()"
+                  [errorMessage]="summaryErrorMessage()"
+                  (retryRequested)="retrySiteSummary(site.id)"
+                  (centroidRequested)="highlightCentroid($event)"
+                />
 
                 <div class="inspector-actions">
                   @if (!renaming()) {
@@ -629,11 +403,12 @@
             <svg lucideArrowRight aria-hidden="true"></svg>
           </a>
         } @else {
-          <div class="inspector-empty">
-            <span aria-hidden="true"><svg lucideLandPlot></svg></span>
-            <h2>No site selected</h2>
-            <p>Select a site from the list or click its boundary on the map.</p>
-          </div>
+          <fg-empty-state
+            icon="map"
+            title="No site selected"
+            description="Select a site from the list or click its boundary on the map."
+            [headingLevel]="2"
+          />
         }
       </aside>
     </section>

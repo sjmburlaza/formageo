@@ -7,25 +7,23 @@
   </nav>
 
   @if (loading()) {
-    <section class="page-state" aria-live="polite">
-      <span class="spinner" aria-hidden="true"></span>
-      <h1>Loading site intelligence</h1>
-      <p>Retrieving the saved boundary and analysis history…</p>
-    </section>
+    <fg-page-state
+      title="Loading site intelligence"
+      description="Retrieving the saved boundary and analysis history…"
+    />
   } @else if (!site()) {
-    <section class="page-state" role="alert">
-      <svg class="error-icon" lucideCircleAlert aria-hidden="true"></svg>
-      <h1>Unable to open site</h1>
-      <p>{{ errorMessage() }}</p>
-      <div class="state-actions">
-        <button class="button button--primary" type="button" (click)="retry()">
-          Try again
-        </button>
-        <a class="button button--secondary" routerLink="/projects">
-          Back to projects
-        </a>
-      </div>
-    </section>
+    <fg-page-state
+      tone="error"
+      title="Unable to open site"
+      [description]="errorMessage() ?? 'The site could not be loaded.'"
+    >
+      <button class="button button--primary" type="button" (click)="retry()">
+        Try again
+      </button>
+      <a class="button button--secondary" routerLink="/projects">
+        Back to projects
+      </a>
+    </fg-page-state>
   } @else {
     <div class="site-shell">
       <a class="back-link" [routerLink]="['/projects', site()!.projectId]">
@@ -38,30 +36,36 @@
           <p class="eyebrow">Analysis results</p>
           <h1>{{ site()!.name }}</h1>
           <div class="site-header__metadata">
-            <span
-              class="status-badge"
-              [class.status-badge--archived]="site()!.status === 'Archived'"
-            >
-              <i aria-hidden="true"></i>
-              {{ site()!.status }}
-            </span>
+            <fg-status-badge
+              [label]="site()!.status"
+              [tone]="site()!.status === 'Archived' ? 'neutral' : 'success'"
+            />
             <span>Boundary CRS · EPSG:4326</span>
             <span>Updated {{ site()!.updatedAtUtc | date: 'medium' }}</span>
           </div>
         </div>
-        <button
-          class="button button--danger"
-          type="button"
-          [disabled]="deleting()"
-          (click)="deleteSite()"
-        >
-          <svg lucideTrash2 aria-hidden="true"></svg>
-          {{ deleting() ? 'Deleting…' : 'Delete site' }}
-        </button>
+        <div class="site-header__actions">
+          <a
+            class="button button--primary"
+            [routerLink]="['/sites', site()!.id, 'scoring']"
+          >
+            <svg lucideChartNoAxesCombined aria-hidden="true"></svg>
+            Build suitability score
+          </a>
+          <button
+            class="button button--danger"
+            type="button"
+            [disabled]="deleting()"
+            (click)="deleteSite()"
+          >
+            <svg lucideTrash2 aria-hidden="true"></svg>
+            {{ deleting() ? 'Deleting…' : 'Delete site' }}
+          </button>
+        </div>
       </header>
 
       @if (errorMessage()) {
-        <p class="error-banner" role="alert">{{ errorMessage() }}</p>
+        <fg-alert class="site-error" tone="error" [message]="errorMessage()!" />
       }
 
       <section class="analysis-workspace" aria-label="Site analysis workspace">
@@ -93,32 +97,7 @@
         </section>
       </section>
 
-      <details class="boundary-record">
-        <summary>Boundary record and GeoJSON</summary>
-        <dl>
-          <div>
-            <dt>Site ID</dt>
-            <dd>
-              <code>{{ site()!.id }}</code>
-            </dd>
-          </div>
-          <div>
-            <dt>Project ID</dt>
-            <dd>
-              <code>{{ site()!.projectId }}</code>
-            </dd>
-          </div>
-          <div>
-            <dt>Geometry</dt>
-            <dd>{{ site()!.boundary.type }}</dd>
-          </div>
-          <div>
-            <dt>Rings</dt>
-            <dd>{{ site()!.boundary.coordinates.length }}</dd>
-          </div>
-        </dl>
-        <pre><code>{{ formattedBoundary(site()!) }}</code></pre>
-      </details>
+      <fg-site-boundary-record [site]="site()!" />
     </div>
   }
 </main>

@@ -1,0 +1,8 @@
+<article class="metric-card" [class.metric-card--danger]="tone() === 'danger'">
+  <span>{{ label() }}</span>
+  @if (interactive()) {
+    <button type="button" (click)="activated.emit()">{{ value() }}</button>
+  } @else {
+    <strong>{{ value() }}</strong>
+  }
+</article>

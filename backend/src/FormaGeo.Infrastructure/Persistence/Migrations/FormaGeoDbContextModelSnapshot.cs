@@ -589,6 +589,205 @@ namespace FormaGeo.Infrastructure.Persistence.Migrations
                     b.ToTable("projects", (string)null);
                 });
 
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringCriterion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("DataSource")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("data_source");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("direction");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("criterion_key");
+
+                    b.Property<decimal>("LowerThreshold")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("lower_threshold");
+
+                    b.Property<string>("MissingDataBehavior")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("missing_data_behavior");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizationMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("normalization_method");
+
+                    b.Property<Guid>("ScoringModelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scoring_model_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("unit");
+
+                    b.Property<decimal>("UpperThreshold")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("upper_threshold");
+
+                    b.Property<decimal>("Weight")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("numeric(8,4)")
+                        .HasColumnName("weight");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScoringModelId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("scoring_criteria", (string)null);
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringModel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("ScoringScenarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scoring_scenario_id");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScoringScenarioId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("scoring_models", (string)null);
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BreakdownJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("breakdown");
+
+                    b.Property<DateTimeOffset>("CalculatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("calculated_at_utc");
+
+                    b.Property<bool>("IsScoreable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_scoreable");
+
+                    b.Property<decimal?>("OverallScore")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasColumnName("overall_score");
+
+                    b.Property<string>("Rating")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("rating");
+
+                    b.Property<Guid>("ScoringModelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scoring_model_id");
+
+                    b.Property<Guid>("ScoringScenarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scoring_scenario_id");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("site_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScoringModelId");
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("ScoringScenarioId", "SiteId", "CalculatedAtUtc");
+
+                    b.ToTable("scoring_results", (string)null);
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringScenario", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("scoring_scenarios", (string)null);
+                });
+
             modelBuilder.Entity("FormaGeo.Domain.Sites.Site", b =>
                 {
                     b.Property<Guid>("Id")
@@ -693,6 +892,54 @@ namespace FormaGeo.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringCriterion", b =>
+                {
+                    b.HasOne("FormaGeo.Domain.Scoring.ScoringModel", null)
+                        .WithMany("Criteria")
+                        .HasForeignKey("ScoringModelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringModel", b =>
+                {
+                    b.HasOne("FormaGeo.Domain.Scoring.ScoringScenario", null)
+                        .WithMany()
+                        .HasForeignKey("ScoringScenarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringResult", b =>
+                {
+                    b.HasOne("FormaGeo.Domain.Scoring.ScoringModel", null)
+                        .WithMany()
+                        .HasForeignKey("ScoringModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FormaGeo.Domain.Scoring.ScoringScenario", null)
+                        .WithMany()
+                        .HasForeignKey("ScoringScenarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FormaGeo.Domain.Sites.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringScenario", b =>
+                {
+                    b.HasOne("FormaGeo.Domain.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FormaGeo.Domain.Sites.Site", b =>
                 {
                     b.HasOne("FormaGeo.Domain.Projects.Project", null)
@@ -707,6 +954,11 @@ namespace FormaGeo.Infrastructure.Persistence.Migrations
                     b.Navigation("LegendItems");
 
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("FormaGeo.Domain.Scoring.ScoringModel", b =>
+                {
+                    b.Navigation("Criteria");
                 });
 #pragma warning restore 612, 618
         }

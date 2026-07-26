@@ -1,0 +1,18 @@
+<section
+  class="page-state"
+  [class.page-state--viewport]="fullViewport()"
+  [attr.aria-live]="tone() === 'loading' ? 'polite' : null"
+  [attr.role]="tone() === 'error' ? 'alert' : null"
+>
+  @if (tone() === 'loading') {
+    <span class="spinner" aria-hidden="true"></span>
+  } @else {
+    <span class="error-icon" aria-hidden="true">
+      <svg lucideCircleAlert></svg>
+    </span>
+  }
+
+  <h1>{{ title() }}</h1>
+  <p>{{ description() }}</p>
+  <div class="page-state__actions"><ng-content /></div>
+</section>

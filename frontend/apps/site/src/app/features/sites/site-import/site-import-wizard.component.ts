@@ -23,11 +23,8 @@ import {
   SitesApiService,
 } from '@frontend/api-client';
 import { MapComponent, MapFeature } from '@frontend/map';
-import {
-  Project,
-  SiteImportMode,
-  SiteImportResult,
-} from '@frontend/models';
+import { Project, SiteImportMode, SiteImportResult } from '@frontend/models';
+import { AlertComponent } from '@frontend/ui';
 import {
   LucideArrowLeft,
   LucideArrowRight,
@@ -56,6 +53,7 @@ type SourceMode = 'file' | 'paste';
   selector: 'fg-site-import-wizard',
   standalone: true,
   imports: [
+    AlertComponent,
     CommonModule,
     LucideArrowLeft,
     LucideArrowRight,
@@ -110,8 +108,7 @@ export class SiteImportWizardComponent implements OnInit {
   protected readonly validFeatures = computed(
     () =>
       this.preview()?.features.filter(
-        (feature) =>
-          feature.issues.length === 0 && feature.polygons.length > 0,
+        (feature) => feature.issues.length === 0 && feature.polygons.length > 0,
       ) ?? [],
   );
   protected readonly selectedCount = computed(
@@ -132,13 +129,8 @@ export class SiteImportWizardComponent implements OnInit {
   );
   protected readonly selectedPolygonCount = computed(() =>
     this.validFeatures()
-      .filter((feature) =>
-        this.selectedFeatureIndexes().has(feature.index),
-      )
-      .reduce(
-        (total, feature) => total + feature.polygons.length,
-        0,
-      ),
+      .filter((feature) => this.selectedFeatureIndexes().has(feature.index))
+      .reduce((total, feature) => total + feature.polygons.length, 0),
   );
 
   protected readonly configureForm = new FormGroup({
@@ -157,9 +149,7 @@ export class SiteImportWizardComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.configureForm.controls.targetProjectId.setValue(
-      this.currentProjectId,
-    );
+    this.configureForm.controls.targetProjectId.setValue(this.currentProjectId);
     this.projectsApi
       .getProjects()
       .pipe(finalize(() => this.projectsLoading.set(false)))
@@ -182,9 +172,7 @@ export class SiteImportWizardComponent implements OnInit {
   }
 
   protected updatePasteContent(event: Event): void {
-    this.pasteContent.set(
-      (event.target as HTMLTextAreaElement).value,
-    );
+    this.pasteContent.set((event.target as HTMLTextAreaElement).value);
   }
 
   protected handleDragOver(event: DragEvent): void {
@@ -226,19 +214,14 @@ export class SiteImportWizardComponent implements OnInit {
       return;
     }
 
-    const file = new File(
-      [content],
-      'pasted-boundary.geojson',
-      { type: 'application/geo+json' },
-    );
+    const file = new File([content], 'pasted-boundary.geojson', {
+      type: 'application/geo+json',
+    });
 
     this.parseSource(file, content);
   }
 
-  protected toggleFeature(
-    featureIndex: number,
-    event: Event,
-  ): void {
+  protected toggleFeature(featureIndex: number, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
 
     this.selectedFeatureIndexes.update((current) => {
@@ -262,9 +245,7 @@ export class SiteImportWizardComponent implements OnInit {
 
   protected goToConfigure(): void {
     if (this.selectedCount() === 0) {
-      this.errorMessage.set(
-        'Select at least one valid feature to import.',
-      );
+      this.errorMessage.set('Select at least one valid feature to import.');
       return;
     }
 
@@ -298,19 +279,15 @@ export class SiteImportWizardComponent implements OnInit {
       return;
     }
 
-    const targetProjectId =
-      this.configureForm.controls.targetProjectId.value;
+    const targetProjectId = this.configureForm.controls.targetProjectId.value;
     this.submitting.set(true);
     this.errorMessage.set(null);
 
     this.sitesApi
       .importSites(targetProjectId, file, {
-        namePattern:
-          this.configureForm.controls.namePattern.value.trim(),
+        namePattern: this.configureForm.controls.namePattern.value.trim(),
         mode: this.configureForm.controls.mode.value,
-        selectedFeatureIndexes: [
-          ...this.selectedFeatureIndexes(),
-        ],
+        selectedFeatureIndexes: [...this.selectedFeatureIndexes()],
       })
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
@@ -324,10 +301,7 @@ export class SiteImportWizardComponent implements OnInit {
         },
         error: (error: unknown) => {
           this.errorMessage.set(
-            getApiErrorMessage(
-              error,
-              'The GeoJSON could not be imported.',
-            ),
+            getApiErrorMessage(error, 'The GeoJSON could not be imported.'),
           );
         },
       });
@@ -358,10 +332,7 @@ export class SiteImportWizardComponent implements OnInit {
     }
 
     this.closed.emit();
-    void this.router.navigate([
-      '/projects',
-      result.projectId,
-    ]);
+    void this.router.navigate(['/projects', result.projectId]);
   }
 
   protected modeDescription(): string {
@@ -383,9 +354,7 @@ export class SiteImportWizardComponent implements OnInit {
     }
 
     if (file.size > SiteImportWizardComponent.maximumFileSize) {
-      this.errorMessage.set(
-        'The GeoJSON file cannot exceed 1 MB.',
-      );
+      this.errorMessage.set('The GeoJSON file cannot exceed 1 MB.');
       return;
     }
 
@@ -412,8 +381,7 @@ export class SiteImportWizardComponent implements OnInit {
           preview.features
             .filter(
               (feature) =>
-                feature.issues.length === 0 &&
-                feature.polygons.length > 0,
+                feature.issues.length === 0 && feature.polygons.length > 0,
             )
             .map((feature) => feature.index),
         ),

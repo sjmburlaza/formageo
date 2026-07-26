@@ -1,0 +1,76 @@
+:host {
+  display: block;
+}
+
+.page-state {
+  min-height: calc(100vh - var(--fg-topbar-height));
+  padding: var(--fg-space-8);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+}
+
+.page-state--viewport {
+  min-height: 100vh;
+}
+
+.page-state h1 {
+  margin: var(--fg-space-4) 0 var(--fg-space-2);
+  font: var(--fg-type-heading-lg);
+}
+
+.page-state p {
+  max-width: 36rem;
+  margin: 0;
+  color: var(--fg-text-secondary);
+  font: var(--fg-type-body-md);
+}
+
+.spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--fg-neutral-200);
+  border-top-color: var(--fg-brand-600);
+  border-radius: var(--fg-radius-full);
+  animation: page-state-spin 750ms linear infinite;
+}
+
+.error-icon {
+  width: 3rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--fg-radius-full);
+  color: var(--fg-neutral-0);
+  background: var(--fg-error);
+}
+
+.error-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.page-state__actions {
+  margin-top: var(--fg-space-5);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--fg-space-2);
+}
+
+.page-state__actions:empty {
+  display: none;
+}
+
+@keyframes page-state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

@@ -26,6 +26,7 @@ import {
   LayerGeometryType,
   Site,
 } from '@frontend/models';
+import { EmptyStateComponent, MetricCardComponent } from '@frontend/ui';
 import {
   LucideChartNoAxesCombined,
   LucideCircleAlert,
@@ -35,7 +36,6 @@ import {
   LucideEyeOff,
   LucideHistory,
   LucideInfo,
-  LucideLayers3,
   LucideMapPinned,
   LucideRotateCcw,
   LucideX,
@@ -94,6 +94,7 @@ const RESULT_STYLES: Record<
   standalone: true,
   imports: [
     CommonModule,
+    EmptyStateComponent,
     LucideChartNoAxesCombined,
     LucideCircleAlert,
     LucideCircleCheck,
@@ -102,8 +103,8 @@ const RESULT_STYLES: Record<
     LucideEyeOff,
     LucideHistory,
     LucideInfo,
-    LucideLayers3,
     LucideMapPinned,
+    MetricCardComponent,
     LucideRotateCcw,
     LucideX,
   ],

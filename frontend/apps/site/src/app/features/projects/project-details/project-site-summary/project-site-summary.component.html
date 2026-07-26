@@ -1,0 +1,92 @@
+<section class="site-summary" aria-labelledby="site-summary-title">
+  <div class="site-summary__heading">
+    <div>
+      <p class="eyebrow">Spatial measurements</p>
+      <h3 id="site-summary-title">Site summary</h3>
+    </div>
+    @if (summary(); as summary) {
+      <span>{{ summary.geometry.vertexCount }} vertices</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="summary-loading" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      Calculating measurements…
+    </div>
+  } @else if (errorMessage()) {
+    <div class="summary-error" role="alert">
+      <p>{{ errorMessage() }}</p>
+      <button type="button" (click)="retryRequested.emit()">Try again</button>
+    </div>
+  } @else if (summary(); as summary) {
+    <div class="metric-grid">
+      <fg-metric-card
+        label="Area"
+        [value]="formatArea(summary.measurements.areaSquareMetres)"
+      />
+      <fg-metric-card
+        label="Perimeter"
+        [value]="formatPerimeter(summary.measurements.perimeterMetres)"
+      />
+      @if (summary.location.centroid; as centroid) {
+        <fg-metric-card
+          label="Centroid · lon, lat"
+          [value]="formatCentroid(centroid)"
+          [interactive]="true"
+          (activated)="centroidRequested.emit(summary)"
+        />
+      } @else {
+        <fg-metric-card label="Centroid · lon, lat" value="Unavailable" />
+      }
+      <fg-metric-card
+        label="Boundary"
+        [value]="summary.geometry.isValid ? 'Valid' : 'Invalid'"
+        [tone]="summary.geometry.isValid ? 'default' : 'danger'"
+      />
+    </div>
+
+    <dl class="summary-details">
+      <div>
+        <dt>Coordinate system</dt>
+        <dd>
+          <strong>{{ summary.geometry.coordinateSystem }}</strong>
+          <span>{{ summary.measurements.calculationMethod }}</span>
+        </dd>
+      </div>
+      <div>
+        <dt>Bounding box</dt>
+        <dd class="bounding-box">
+          <span>
+            <small>West</small>
+            {{ formatCoordinate(summary.location.boundingBox.west) }}
+          </span>
+          <span>
+            <small>North</small>
+            {{ formatCoordinate(summary.location.boundingBox.north) }}
+          </span>
+          <span>
+            <small>East</small>
+            {{ formatCoordinate(summary.location.boundingBox.east) }}
+          </span>
+          <span>
+            <small>South</small>
+            {{ formatCoordinate(summary.location.boundingBox.south) }}
+          </span>
+        </dd>
+      </div>
+    </dl>
+
+    @if (summary.dataQualityWarnings.length > 0) {
+      <div class="geometry-warning" role="alert">
+        <svg lucideCircleAlert aria-hidden="true"></svg>
+        <div>
+          <strong>Geometry warning</strong>
+          @for (warning of summary.dataQualityWarnings; track warning) {
+            <p>{{ warning }}</p>
+          }
+        </div>
+      </div>
+    }
+  }
+</section>
