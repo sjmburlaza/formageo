@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,25 +15,18 @@ import { RouterLink } from '@angular/router';
 import { getApiErrorMessage, ProjectsApiService } from '@frontend/api-client';
 import { Project } from '@frontend/models';
 import { AlertComponent, EmptyStateComponent } from '@frontend/ui';
-import {
-  LucideArrowRight,
-  LucideEllipsis,
-  LucideLandPlot,
-  LucidePlus,
-} from '@lucide/angular';
+import { LucidePlus } from '@lucide/angular';
 import { finalize } from 'rxjs';
+import { ProjectCardComponent } from './project-card/project-card.component';
 
 @Component({
   selector: 'fg-project-list',
   standalone: true,
   imports: [
     AlertComponent,
-    CommonModule,
     EmptyStateComponent,
-    LucideArrowRight,
-    LucideEllipsis,
-    LucideLandPlot,
     LucidePlus,
+    ProjectCardComponent,
     ReactiveFormsModule,
     RouterLink,
   ],

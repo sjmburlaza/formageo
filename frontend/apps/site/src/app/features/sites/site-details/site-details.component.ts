@@ -29,6 +29,7 @@ import {
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
 import { SiteAnalysisComponent } from '../../analyses/site-analysis.component';
+import { SiteBoundaryRecordComponent } from './site-boundary-record/site-boundary-record.component';
 
 @Component({
   selector: 'fg-site-details',
@@ -43,6 +44,7 @@ import { SiteAnalysisComponent } from '../../analyses/site-analysis.component';
     PageStateComponent,
     RouterLink,
     SiteAnalysisComponent,
+    SiteBoundaryRecordComponent,
     StatusBadgeComponent,
   ],
   templateUrl: './site-details.component.html',
@@ -115,10 +117,6 @@ export class SiteDetailsComponent implements OnInit {
 
   protected retry(): void {
     this.loadSite();
-  }
-
-  protected formattedBoundary(site: Site): string {
-    return JSON.stringify(site.boundary, null, 2);
   }
 
   protected handleAnalysisOverlaysChanged(overlays: MapOverlay[]): void {

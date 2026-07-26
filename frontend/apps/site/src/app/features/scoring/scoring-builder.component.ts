@@ -16,14 +16,10 @@ import {
 } from '@frontend/api-client';
 import { MapComponent, MapFeature } from '@frontend/map';
 import {
-  MissingDataBehavior,
-  NormalizationMethod,
-  SaveScoringCriterion,
   SaveScoringScenarioRequest,
   ScoringCatalog,
   ScoringCriterion,
   ScoringCriterionDefinition,
-  ScoringDirection,
   ScoringPreset,
   ScoringResult,
   ScoringScenario,
@@ -46,15 +42,10 @@ import {
   LucidePlus,
   LucideSave,
   LucideSparkles,
-  LucideTrash2,
 } from '@lucide/angular';
 import { finalize, forkJoin } from 'rxjs';
-
-type EditableCriterion = SaveScoringCriterion & {
-  description: string;
-  requiredAnalysis: string;
-  recommendedDirection: ScoringDirection;
-};
+import { ScoringCriterionCardComponent } from './scoring-criterion-card/scoring-criterion-card.component';
+import { EditableCriterion } from './scoring-criterion-card/scoring-criterion-card.models';
 
 @Component({
   selector: 'fg-scoring-builder',
@@ -75,10 +66,10 @@ type EditableCriterion = SaveScoringCriterion & {
     LucidePlus,
     LucideSave,
     LucideSparkles,
-    LucideTrash2,
     MapComponent,
     PageStateComponent,
     RouterLink,
+    ScoringCriterionCardComponent,
   ],
   templateUrl: './scoring-builder.component.html',
   styleUrl: './scoring-builder.component.scss',
@@ -332,43 +323,6 @@ export class ScoringBuilderComponent implements OnInit {
     this.markDirty();
   }
 
-  protected updateWeight(key: string, value: string): void {
-    this.updateCriterion(key, {
-      weight: this.numberValue(value),
-    });
-  }
-
-  protected updateDirection(key: string, value: ScoringDirection): void {
-    this.updateCriterion(key, { direction: value });
-  }
-
-  protected updateNormalization(key: string, value: NormalizationMethod): void {
-    this.updateCriterion(key, {
-      normalizationMethod: value,
-    });
-  }
-
-  protected updateLowerThreshold(key: string, value: string): void {
-    this.updateCriterion(key, {
-      lowerThreshold: this.numberValue(value),
-    });
-  }
-
-  protected updateUpperThreshold(key: string, value: string): void {
-    this.updateCriterion(key, {
-      upperThreshold: this.numberValue(value),
-    });
-  }
-
-  protected updateMissingBehavior(
-    key: string,
-    value: MissingDataBehavior,
-  ): void {
-    this.updateCriterion(key, {
-      missingDataBehavior: value,
-    });
-  }
-
   protected toggleComparisonSite(siteId: string, checked: boolean): void {
     this.selectedSiteIds.update((selected) => {
       const next = new Set(selected);
@@ -584,7 +538,7 @@ export class ScoringBuilderComponent implements OnInit {
       });
   }
 
-  private updateCriterion(
+  protected updateCriterion(
     key: string,
     change: Partial<EditableCriterion>,
   ): void {
@@ -599,11 +553,6 @@ export class ScoringBuilderComponent implements OnInit {
   private markDirty(): void {
     this.dirty.set(true);
     this.noticeMessage.set(null);
-  }
-
-  private numberValue(value: string): number {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : 0;
   }
 
   private fromDefinition(

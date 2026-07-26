@@ -84,11 +84,7 @@
       @if (loading()) {
         <div class="project-grid" aria-live="polite">
           @for (placeholder of [1, 2, 3]; track placeholder) {
-            <div class="project-card project-card--loading">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
+            <fg-project-card [loading]="true" />
           }
         </div>
       } @else if (projects().length === 0) {
@@ -106,42 +102,7 @@
         <ul class="project-grid">
           @for (project of projects(); track project.id) {
             <li>
-              <article class="project-card">
-                <div class="project-card__top">
-                  <span class="project-card__icon" aria-hidden="true">
-                    <svg lucideLandPlot></svg>
-                  </span>
-                  <details class="project-menu">
-                    <summary aria-label="Open project menu">
-                      <svg lucideEllipsis aria-hidden="true"></svg>
-                    </summary>
-                    <div>
-                      <a [routerLink]="['/projects', project.id]">
-                        Open workspace
-                      </a>
-                    </div>
-                  </details>
-                </div>
-
-                <div class="project-card__body">
-                  <h3>{{ project.name }}</h3>
-                  <p>Created {{ project.createdAtUtc | date: 'mediumDate' }}</p>
-                </div>
-
-                <div class="project-card__footer">
-                  <span>
-                    <strong>{{ project.siteCount }}</strong>
-                    {{ project.siteCount === 1 ? 'site' : 'sites' }}
-                  </span>
-                  <a
-                    class="open-project"
-                    [routerLink]="['/projects', project.id]"
-                  >
-                    Open project
-                    <svg lucideArrowRight aria-hidden="true"></svg>
-                  </a>
-                </div>
-              </article>
+              <fg-project-card [project]="project" />
             </li>
           }
         </ul>

@@ -97,32 +97,7 @@
         </section>
       </section>
 
-      <details class="boundary-record">
-        <summary>Boundary record and GeoJSON</summary>
-        <dl>
-          <div>
-            <dt>Site ID</dt>
-            <dd>
-              <code>{{ site()!.id }}</code>
-            </dd>
-          </div>
-          <div>
-            <dt>Project ID</dt>
-            <dd>
-              <code>{{ site()!.projectId }}</code>
-            </dd>
-          </div>
-          <div>
-            <dt>Geometry</dt>
-            <dd>{{ site()!.boundary.type }}</dd>
-          </div>
-          <div>
-            <dt>Rings</dt>
-            <dd>{{ site()!.boundary.coordinates.length }}</dd>
-          </div>
-        </dl>
-        <pre><code>{{ formattedBoundary(site()!) }}</code></pre>
-      </details>
+      <fg-site-boundary-record [site]="site()!" />
     </div>
   }
 </main>

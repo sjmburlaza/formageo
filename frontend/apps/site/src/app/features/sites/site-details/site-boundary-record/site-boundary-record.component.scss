@@ -1,0 +1,61 @@
+:host {
+  display: block;
+  margin-top: var(--fg-space-4);
+}
+
+.boundary-record {
+  border: 1px solid var(--fg-border-default);
+  border-radius: var(--fg-radius-lg);
+  background: var(--fg-surface-primary);
+}
+
+.boundary-record > summary {
+  min-height: 3rem;
+  padding: 0 var(--fg-space-4);
+  display: flex;
+  align-items: center;
+  color: var(--fg-text-secondary);
+  font: var(--fg-type-label-md);
+  cursor: pointer;
+}
+
+.boundary-record dl {
+  padding: 0 var(--fg-space-4) var(--fg-space-4);
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--fg-space-4);
+}
+
+.boundary-record dt {
+  color: var(--fg-text-muted);
+  font: var(--fg-type-label-sm);
+}
+
+.boundary-record dd {
+  margin: var(--fg-space-1) 0 0;
+  overflow-wrap: anywhere;
+  font: var(--fg-type-body-sm);
+}
+
+.boundary-record code {
+  font-family: var(--fg-font-mono);
+}
+
+.boundary-record pre {
+  max-height: 24rem;
+  padding: var(--fg-space-4);
+  margin: 0 var(--fg-space-4) var(--fg-space-4);
+  overflow: auto;
+  border-radius: var(--fg-radius-md);
+  color: var(--fg-neutral-200);
+  background: var(--fg-surface-map-dark);
+  font: var(--fg-type-caption);
+  font-family: var(--fg-font-mono);
+}
+
+@media (max-width: 45rem) {
+  .boundary-record dl {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,96 @@
+<aside class="sites-panel">
+  <div class="panel-heading">
+    <div>
+      <p class="eyebrow">Project boundaries</p>
+      <h2>Sites</h2>
+    </div>
+    <span class="count-badge">{{ sites().length }}</span>
+  </div>
+
+  <label class="site-search">
+    <svg lucideSearch aria-hidden="true"></svg>
+    <input
+      type="search"
+      placeholder="Search sites"
+      aria-label="Search sites"
+      [value]="searchQuery()"
+      (input)="updateSearch($event)"
+    />
+  </label>
+
+  @if (sites().length === 0) {
+    <fg-empty-state
+      icon="map"
+      title="No sites have been added"
+      description="Add a location by drawing a boundary or importing spatial data."
+    >
+      <button
+        class="button button--primary button--full"
+        type="button"
+        (click)="drawRequested.emit()"
+      >
+        Add site
+      </button>
+    </fg-empty-state>
+  } @else if (filteredSites().length === 0) {
+    <fg-empty-state
+      icon="search"
+      title="No matching sites"
+      description="Try a different search term."
+      [compact]="true"
+    />
+  } @else {
+    <ul class="site-list">
+      @for (site of filteredSites(); track site.id) {
+        <li
+          class="site-list-item"
+          [class.site-list-item--active]="selectedSiteId() === site.id"
+          [class.site-list-item--archived]="site.status === 'Archived'"
+        >
+          <button
+            class="visibility-button"
+            type="button"
+            [class.visibility-button--hidden]="hiddenSiteIds().has(site.id)"
+            [attr.aria-label]="
+              (hiddenSiteIds().has(site.id) ? 'Show ' : 'Hide ') + site.name
+            "
+            (click)="visibilityToggled.emit(site)"
+          >
+            @if (hiddenSiteIds().has(site.id)) {
+              <svg lucideEyeOff aria-hidden="true"></svg>
+            } @else {
+              <svg lucideEye aria-hidden="true"></svg>
+            }
+          </button>
+
+          <button
+            class="site-select-button"
+            type="button"
+            [attr.aria-pressed]="selectedSiteId() === site.id"
+            (click)="siteSelected.emit(site)"
+          >
+            <span class="site-swatch" aria-hidden="true">
+              <svg lucideLandPlot></svg>
+            </span>
+            <span class="site-copy">
+              <strong>{{ site.name }}</strong>
+              <small>
+                {{ site.status }} · {{ site.boundary.coordinates.length }}
+                {{ site.boundary.coordinates.length === 1 ? 'ring' : 'rings' }}
+              </small>
+            </span>
+            @if (selectedSiteId() === site.id) {
+              <span class="selected-indicator">Selected</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  <footer class="panel-footer">
+    <span class="legend-swatch"></span>
+    <span>Site boundary</span>
+    <strong>EPSG:4326</strong>
+  </footer>
+</aside>

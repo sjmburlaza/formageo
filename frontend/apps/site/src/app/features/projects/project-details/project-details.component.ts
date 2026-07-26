@@ -45,36 +45,26 @@ import {
 import {
   AlertComponent,
   EmptyStateComponent,
-  MetricCardComponent,
   PageStateComponent,
   StatusBadgeComponent,
 } from '@frontend/ui';
 import {
   LucideArrowLeft,
   LucideArrowRight,
-  LucideCircleAlert,
   LucideCircleCheck,
   LucideColumns3,
-  LucideEye,
-  LucideEyeOff,
   LucideFileText,
-  LucideLandPlot,
   LucidePenTool,
-  LucideSearch,
   LucideUpload,
   LucideX,
 } from '@lucide/angular';
 import { finalize, forkJoin } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
-import {
-  formatArea,
-  formatCentroid,
-  formatCoordinate,
-  formatPerimeter,
-} from './site-summary-formatters';
 import { SiteImportWizardComponent } from '../../sites/site-import/site-import-wizard.component';
 import { SiteImportCompletedEvent } from '../../sites/site-import/site-import.models';
 import { SiteAnalysisComponent } from '../../analyses/site-analysis.component';
+import { ProjectSiteListComponent } from './project-site-list/project-site-list.component';
+import { ProjectSiteSummaryComponent } from './project-site-summary/project-site-summary.component';
 
 type InspectorTab = 'overview' | 'boundary' | 'analysis' | 'history';
 type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
@@ -88,20 +78,16 @@ type SavingAction = 'rename' | 'boundary' | 'archive' | 'restore' | 'delete';
     EmptyStateComponent,
     LucideArrowLeft,
     LucideArrowRight,
-    LucideCircleAlert,
     LucideCircleCheck,
     LucideColumns3,
-    LucideEye,
-    LucideEyeOff,
     LucideFileText,
-    LucideLandPlot,
     LucidePenTool,
-    LucideSearch,
     LucideUpload,
     LucideX,
     MapComponent,
-    MetricCardComponent,
     PageStateComponent,
+    ProjectSiteListComponent,
+    ProjectSiteSummaryComponent,
     ReactiveFormsModule,
     RouterLink,
     SiteAnalysisComponent,
@@ -161,26 +147,9 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly summaryLoading = signal(false);
   protected readonly summaryErrorMessage = signal<string | null>(null);
   protected readonly createErrorMessage = signal<string | null>(null);
-  protected readonly searchQuery = signal('');
   protected readonly hiddenSiteIds = signal<ReadonlySet<string>>(new Set());
   protected readonly activeInspectorTab = signal<InspectorTab>('overview');
   protected readonly renaming = signal(false);
-  protected readonly formatArea = formatArea;
-  protected readonly formatCentroid = formatCentroid;
-  protected readonly formatCoordinate = formatCoordinate;
-  protected readonly formatPerimeter = formatPerimeter;
-
-  protected readonly filteredSites = computed(() => {
-    const query = this.searchQuery().trim().toLocaleLowerCase();
-
-    if (!query) {
-      return this.sites();
-    }
-
-    return this.sites().filter((site) =>
-      site.name.toLocaleLowerCase().includes(query),
-    );
-  });
 
   protected readonly mapFeatures = computed<MapFeature[]>(() => {
     const hiddenIds = this.hiddenSiteIds();
@@ -430,8 +399,7 @@ export class ProjectDetailsComponent implements OnInit {
     }
   }
 
-  protected toggleSiteVisibility(site: Site, event: Event): void {
-    event.stopPropagation();
+  protected toggleSiteVisibility(site: Site): void {
     this.hiddenSiteIds.update((ids) => {
       const nextIds = new Set(ids);
 
@@ -443,10 +411,6 @@ export class ProjectDetailsComponent implements OnInit {
 
       return nextIds;
     });
-  }
-
-  protected updateSearch(event: Event): void {
-    this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 
   protected handleMapModeChanged(mode: MapInteractionMode): void {

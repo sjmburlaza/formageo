@@ -1,0 +1,237 @@
+:host {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.sites-panel {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  padding: var(--fg-space-5);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--fg-border-default);
+  background: var(--fg-neutral-0);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.3rem;
+  color: var(--fg-brand-700);
+  font: var(--fg-type-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h2 {
+  margin: 0;
+  font: var(--fg-type-heading-md);
+  letter-spacing: -0.025em;
+}
+
+.count-badge {
+  min-width: 1.7rem;
+  height: 1.7rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--fg-radius-full);
+  color: var(--fg-brand-800);
+  background: var(--fg-brand-50);
+  font: var(--fg-type-label-sm);
+}
+
+.site-search {
+  height: var(--fg-control-height-md);
+  margin: var(--fg-space-4) 0;
+  padding: 0 var(--fg-space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--fg-space-2);
+  border: 1px solid var(--fg-border-default);
+  border-radius: var(--fg-radius-md);
+  color: var(--fg-neutral-500);
+  background: var(--fg-surface-primary);
+  box-shadow: var(--fg-shadow-xs);
+}
+
+.site-search:focus-within {
+  border-color: var(--fg-border-active);
+  box-shadow: var(--fg-focus-ring);
+}
+
+.site-search > svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+
+.site-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: var(--fg-neutral-700);
+  background: transparent;
+  font: var(--fg-type-body-sm);
+}
+
+.site-list {
+  min-height: 0;
+  padding: 0;
+  margin: 0 -0.3rem;
+  display: grid;
+  align-content: start;
+  gap: 0.32rem;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.site-list-item {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+}
+
+.site-list-item:hover {
+  background: var(--fg-neutral-100);
+}
+
+.site-list-item--active {
+  border-color: var(--fg-brand-200);
+  background: var(--fg-brand-50);
+}
+
+.site-list-item--archived {
+  border-color: var(--fg-border-default);
+  background: var(--fg-neutral-100);
+}
+
+.site-list-item--archived .site-swatch,
+.site-list-item--archived .visibility-button {
+  color: var(--fg-neutral-500);
+}
+
+.site-list-item--archived .site-copy strong {
+  color: var(--fg-neutral-500);
+}
+
+.visibility-button {
+  width: 2rem;
+  height: 2.75rem;
+  border: 0;
+  color: var(--fg-brand-700);
+  background: transparent;
+  cursor: pointer;
+}
+
+.visibility-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.visibility-button--hidden {
+  color: var(--fg-neutral-400);
+}
+
+.site-select-button {
+  min-width: 0;
+  min-height: 3.35rem;
+  padding: 0.48rem 0.55rem 0.48rem 0;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.site-swatch {
+  display: grid;
+  place-items: center;
+  color: var(--fg-brand-700);
+}
+
+.site-swatch svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.site-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.site-copy strong {
+  overflow: hidden;
+  font: var(--fg-type-label-md);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-copy small {
+  color: var(--fg-neutral-500);
+  font: var(--fg-type-caption);
+}
+
+.selected-indicator {
+  margin-left: auto;
+  color: var(--fg-brand-800);
+  font: var(--fg-type-label-sm);
+  text-transform: uppercase;
+}
+
+.panel-footer {
+  padding-top: 0.85rem;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-top: 1px solid var(--fg-border-default);
+  color: var(--fg-neutral-500);
+  font: var(--fg-type-caption);
+}
+
+.panel-footer strong {
+  margin-left: auto;
+  font: var(--fg-type-label-sm);
+}
+
+.legend-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 2px solid var(--fg-brand-700);
+  background: var(--fg-brand-100);
+}
+
+@media (max-width: 680px) {
+  :host {
+    min-height: 15rem;
+  }
+
+  .sites-panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--fg-border-default);
+  }
+
+  .site-list {
+    max-height: 13rem;
+  }
+
+  .panel-footer {
+    margin-top: 1rem;
+  }
+}
